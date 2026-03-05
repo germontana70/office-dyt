@@ -1,0 +1,48 @@
+name: 🏢 Deploy Office DYT → VPS
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.agent/**'
+
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: ✅ Validar Proyecto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Verificar Archivos
+        run: |
+          for file in package.json Dockerfile docker-compose.yml; do
+            if [ ! -f "$file" ]; then exit 1; fi
+          done
+
+  deploy:
+    name: 🚀 Deploy Office (Hostinger API)
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 🏗️ Deploy Office via Hostinger API
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          project-name: office-dyt
+          docker-compose-path: "docker-compose.yml"
+          environment-variables: |
+            TZ=America/Bogota
+            NEXT_TELEMETRY_DISABLED=1

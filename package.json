@@ -1,0 +1,28 @@
+{
+    "name": "office-dyt",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "@supabase/ssr": "^0.9.0",
+        "@supabase/supabase-js": "^2.98.0",
+        "jspdf": "^4.2.0",
+        "jspdf-autotable": "^5.0.7",
+        "next": "latest",
+        "react": "latest",
+        "react-dom": "latest"
+    },
+    "devDependencies": {
+        "@types/node": "latest",
+        "@types/react": "latest",
+        "@types/react-dom": "latest",
+        "eslint": "latest",
+        "eslint-config-next": "latest",
+        "typescript": "latest"
+    }
+}

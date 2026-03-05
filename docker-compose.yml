@@ -1,0 +1,16 @@
+services:
+  office-dyt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: office-dyt
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - TZ=America/Bogota
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    # Persistimos logs y secretos si fuera necesario
+    # volumes:
+    #   - ./.env.local:/app/.env.local:ro

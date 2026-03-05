@@ -1,0 +1,26 @@
+---
+name: [Nombre de la Skill]
+description: [Descripción breve en una línea]
+---
+
+# [Ícono] Habilidad: [Nombre de la Skill]
+
+## 🚀 Propósito
+[Describe para qué sirve esta habilidad y qué problema resuelve].
+
+## 🛠️ Instrucciones de Uso
+- [Regla 1]
+- [Regla 2]
+- [Regla 3]
+
+## 🏛️ Reglas Arquitectónicas
+- **Seguridad**: [Reglas sobre secretos o accesos].
+- **Estructura**: [Dónde debe vivir el código generado].
+- **Protocolo**: Esta habilidad debe seguir el Protocolo Orchestrator-X.
+
+## 📦 Recursos y Scripts
+- `scripts/[script_name].py`: [Descripción].
+- `resources/[resource_name].json`: [Descripción].
+
+---
+*Generado automáticamente por la habilidad `generador-habilidades`*
