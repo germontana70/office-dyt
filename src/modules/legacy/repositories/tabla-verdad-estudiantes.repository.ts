@@ -10,7 +10,7 @@ export class TablaVerdadEstudiantesRepository extends BaseRepository<'Tabla_Verd
     }
 
     async getByDocument(documentNumber: string): Promise<TablaVerdadEstudiantesRow | null> {
-        const { data, error } = await this.table
+        const { data, error } = await this.client.from('Tabla_Verdad_Estudiantes')
             .select('*')
             .eq('numero_de_identificacion', documentNumber)
             .maybeSingle();

@@ -9,8 +9,4 @@ export abstract class BaseRepository<T extends keyof Database['public']['Tables'
         this.client = client;
         this.tableName = tableName;
     }
-
-    protected get table() {
-        return this.client.from(this.tableName);
-    }
 }

@@ -11,7 +11,7 @@ export class FormResponsesRepository extends BaseRepository<'form_responses'> {
     }
 
     async getByHash(hash: string): Promise<FormResponseRow | null> {
-        const { data, error } = await this.table.select('*').eq('row_hash', hash).maybeSingle();
+        const { data, error } = await this.client.from('form_responses').select('*').eq('row_hash', hash).maybeSingle();
         if (error) throw new Error(`Error fetching form response by hash: ${error.message}`);
         return data;
     }
@@ -37,8 +37,9 @@ export class FormResponsesRepository extends BaseRepository<'form_responses'> {
         }
 
         // Is a new distinct record from the sheet
-        const { data, error } = await this.table
-            .insert([validatedData as any])
+        const { data, error } = await (this.client as any)
+            .from('form_responses')
+            .insert(validatedData)
             .select()
             .single();
 

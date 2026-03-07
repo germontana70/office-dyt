@@ -11,13 +11,13 @@ export class StudentsRepository extends BaseRepository<'students'> {
     }
 
     async getById(id: string): Promise<StudentRow | null> {
-        const { data, error } = await this.table.select('*').eq('id', id).single();
+        const { data, error } = await this.client.from('students').select('*').eq('id', id).single();
         if (error) throw new Error(`Error fetching student by ID: ${error.message}`);
         return data;
     }
 
     async getByDocument(documentNumber: string): Promise<StudentRow[]> {
-        const { data, error } = await this.table.select('*').eq('document_number', documentNumber);
+        const { data, error } = await this.client.from('students').select('*').eq('document_number', documentNumber);
         if (error) throw new Error(`Error fetching student by document: ${error.message}`);
         return data;
     }
@@ -26,8 +26,9 @@ export class StudentsRepository extends BaseRepository<'students'> {
         // Validate structural integrity before pushing to DB
         const validatedData = StudentSchema.parse(studentData);
 
-        const { data, error } = await this.table
-            .insert([validatedData as any])
+        const { data, error } = await (this.client as any)
+            .from('students')
+            .insert(validatedData)
             .select()
             .single();
 
@@ -36,8 +37,9 @@ export class StudentsRepository extends BaseRepository<'students'> {
     }
 
     async update(id: string, partialData: Partial<Student>): Promise<StudentRow> {
-        const { data, error } = await this.table
-            .update(partialData as any)
+        const { data, error } = await (this.client as any)
+            .from('students')
+            .update(partialData)
             .eq('id', id)
             .select()
             .single();

@@ -1,92 +1,93 @@
-import { createClient } from '@/infra/services/server';
-import { redirect } from 'next/navigation';
-import { dataService } from '@/infra/services/data';
+import { GlassCard } from "@/ui/components/modules/layout/GlassCard";
+import { PremiumButton } from "@/ui/components/modules/buttons/PremiumButton";
+import { GradientText } from "@/ui/components/modules/typography/GradientText";
 
-export default async function DashboardPage() {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-        redirect('/auth');
-    }
-
-    // Obtener datos iniciales para el "Wow Factor" en el Dashboard
-    let studentCount = 0;
-    let teacherCount = 0;
-    let userRole = 'Invitado';
-
-    try {
-        const [students, teachers, profile] = await Promise.all([
-            dataService.getStudents(),
-            dataService.getTeachers(),
-            dataService.getProfile(user.id).catch(() => null)
-        ]);
-
-        studentCount = students.length;
-        teacherCount = teachers.length;
-        userRole = profile?.role || 'Personal';
-    } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-    }
-
+export default function DashboardPage() {
     return (
-        <div style={{ padding: '2rem', maxWidth: '1200px', marginInline: 'auto' }} className="animate-fade-in">
-            {/* Cabecera Premium */}
-            <div style={{ marginBottom: '4rem', textAlign: 'center' }}>
-                <h1 className="accent" style={{ fontSize: '3.5rem', fontFamily: 'var(--font-outfit)', background: 'linear-gradient(135deg, #fff 0%, hsl(var(--primary)) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Dashboard <span style={{ color: 'white', WebkitTextFillColor: 'white' }}>DYT</span>
-                </h1>
-                <p style={{ color: 'hsl(var(--text-muted))', marginTop: '0.5rem', letterSpacing: '0.1rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                    SISTEMA ADMINISTRATIVO PREMIUM | {userRole}
-                </p>
-            </div>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
 
-            {/* Grid de Estadísticas con Glassmorphism */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-                <div className="glass" style={{ padding: '2.5rem', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255, 255, 255, 0.02)', backdropFilter: 'blur(20px)', borderRadius: '24px', textAlign: 'center' }}>
-                    <h3 style={{ fontSize: '0.9rem', color: 'hsl(var(--text-muted))', marginBottom: '1rem', letterSpacing: '0.1rem' }}>ESTUDIANTES ACTIVOS</h3>
-                    <p style={{ fontSize: '4rem', fontWeight: 700, fontFamily: 'var(--font-outfit)', background: 'linear-gradient(135deg, #fff, hsl(var(--primary)))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        {studentCount}
+            <div className="flex justify-between items-end">
+                <div>
+                    <GradientText as="h1" className="text-4xl font-extrabold tracking-tight">
+                        Centro de Mandos
+                    </GradientText>
+                    <p className="text-muted-foreground mt-2 text-lg">
+                        Bienvenido al panel principal de Office DYT
                     </p>
-                    <div style={{ height: '2px', width: '40px', background: 'hsl(var(--primary))', margin: '1.5rem auto 0', borderRadius: '4px' }} />
                 </div>
 
-                <div className="glass" style={{ padding: '2.5rem', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255, 255, 255, 0.02)', backdropFilter: 'blur(20px)', borderRadius: '24px', textAlign: 'center' }}>
-                    <h3 style={{ fontSize: '0.9rem', color: 'hsl(var(--text-muted))', marginBottom: '1rem', letterSpacing: '0.1rem' }}>DOCENTES ASIGNADOS</h3>
-                    <p style={{ fontSize: '4rem', fontWeight: 700, fontFamily: 'var(--font-outfit)', background: 'linear-gradient(135deg, #fff, hsl(var(--secondary)))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        {teacherCount}
-                    </p>
-                    <div style={{ height: '2px', width: '40px', background: 'hsl(var(--secondary))', margin: '1.5rem auto 0', borderRadius: '4px' }} />
-                </div>
+                <PremiumButton variant="primary" className="shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Sincronizar Datos
+                </PremiumButton>
             </div>
 
-            {/* Acciones Rápidas */}
-            <div style={{ marginTop: '4rem', display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
-                <a href="/dashboard/payments" className="glass shimmer" style={{
-                    padding: '1.5rem 3rem',
-                    borderRadius: '16px',
-                    textDecoration: 'none',
-                    color: 'white',
-                    fontWeight: 700,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'pointer'
-                }}>
-                    <span style={{ fontSize: '1.2rem', fontFamily: 'var(--font-outfit)', letterSpacing: '0.05rem' }}>LIQUIDACIÓN PAGOS</span>
-                    <span style={{ fontSize: '0.7rem', opacity: 0.5, letterSpacing: '0.1rem', textTransform: 'uppercase' }}>Periodo Actual</span>
-                </a>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+                <GlassCard interactive className="group relative overflow-hidden">
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-primary/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 text-primary">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <h3 className="text-xl font-semibold">Estudiantes Activos</h3>
+                        </div>
+                        <div className="mt-4">
+                            <span className="text-5xl font-bold tracking-tighter text-foreground">342</span>
+                            <p className="text-sm text-green-400 mt-2 font-medium flex items-center">
+                                <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                +12% este semestre
+                            </p>
+                        </div>
+                    </div>
+                </GlassCard>
+
+                <GlassCard interactive className="group relative overflow-hidden">
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-purple-500/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 text-purple-400">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            <h3 className="text-xl font-semibold">Staging (Nuevos)</h3>
+                        </div>
+                        <div className="mt-4">
+                            <span className="text-5xl font-bold tracking-tighter text-foreground">15</span>
+                            <p className="text-sm text-yellow-400 mt-2 font-medium flex items-center">
+                                <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                Esperando validación MD5
+                            </p>
+                        </div>
+                    </div>
+                </GlassCard>
+
+                <GlassCard interactive className="group relative overflow-hidden md:col-span-2 lg:col-span-1">
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-green-500/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 text-green-400">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 className="text-xl font-semibold">Estado del API Route</h3>
+                        </div>
+                        <div className="mt-4">
+                            <span className="text-2xl font-bold tracking-tight text-foreground block">Sincronización Pasiva</span>
+                            <p className="text-sm text-green-400 mt-2 font-medium">
+                                Listo para Webhooks de GCP
+                            </p>
+
+                            <div className="mt-4 h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500 w-full animate-[pulse_2s_ease-in-out_infinite]" />
+                            </div>
+                        </div>
+                    </div>
+                </GlassCard>
+
             </div>
 
-            {/* Próximos Módulos */}
-            <div className="glass" style={{ marginTop: '4rem', padding: '2.5rem', border: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(0, 0, 0, 0.2)', borderRadius: '20px', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.85rem', color: 'hsl(var(--text-muted))', letterSpacing: '0.05rem' }}>
-                    SISTEMA DE GESTIÓN ACADÉMICA | CONECTADO COMO {user.email}
-                </p>
-            </div>
         </div>
     );
 }
