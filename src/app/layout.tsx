@@ -16,11 +16,9 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="es" className={`${inter.variable} ${outfit.variable}`}>
-            <body className="body-style">
-                <main className="main-container">
-                    {children}
-                </main>
+        <html lang="es" className={`${inter.variable} ${outfit.variable} dark`}>
+            <body className="antialiased bg-background text-foreground">
+                {children}
             </body>
         </html>
     );

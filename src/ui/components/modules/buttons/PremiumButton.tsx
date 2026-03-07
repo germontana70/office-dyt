@@ -13,7 +13,7 @@ export const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
 
         // Variant styles
         const variants = {
-            primary: "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(var(--primary),0.4)] hover:-translate-y-0.5",
+            primary: "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_hsl(var(--primary)/0.6)] hover:-translate-y-0.5",
             secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
             outline: "border border-input hover:bg-accent hover:text-accent-foreground glass-panel-hover",
             ghost: "hover:bg-accent hover:text-accent-foreground",
