@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  office-dyt-dev:
+    image: node:20-alpine
+    container_name: office-dyt-dev
+    working_dir: /app
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - TZ=America/Bogota
+      - NODE_ENV=development
+    command: >
+      sh -c "npm install && npm run dev"
