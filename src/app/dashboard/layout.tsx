@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import Image from "next/image";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,7 +25,14 @@ export default function DashboardLayout({
                 {/* Main Sidebar Placeholder */}
                 <aside className="hidden w-64 flex-col border-r border-white/10 bg-black/20 backdrop-blur-xl md:flex">
                     <div className="flex h-14 items-center border-b border-white/10 px-6">
-                        <span className="font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Office DYT</span>
+                        <Image
+                            src="/logos/dyt-logo-dark.png"
+                            alt="Dones y Talentos Logo"
+                            width={160}
+                            height={40}
+                            className="h-8 w-auto object-contain"
+                            priority
+                        />
                     </div>
                     <nav className="flex-1 space-y-1 p-4">
                         <a href="/dashboard" className="flex items-center gap-3 rounded-lg bg-primary/20 px-3 py-2 text-primary-foreground transition-all">
