@@ -12,9 +12,9 @@ export class TruthTableRepository {
         // Obtenemos los datos desde la tabla legacy de Streamlit. Usamos casting para evitar
         // fallos de TS si no está mapeada 100% en src/infra/types/database.ts
         const { data, error } = await supabase
-            .from('Tabla_Verdad_Estudiantes' as any)
+            .from('Tabla_Verdad_Estudiantes')
             .select('*')
-            .eq('document_number', documentNumber)
+            .eq('numero_de_identificacion', documentNumber)
             .single();
 
         if (error) {
@@ -28,8 +28,19 @@ export class TruthTableRepository {
 
         if (!data) return null;
 
+        // Mapear los campos de la DB al formato esperado por el Esquema Zod
+        const mappedData = {
+            id: data.id,
+            document_number: data.numero_de_identificacion,
+            first_name: data.nombres_del_estudiante,
+            last_name: data.apellidos_del_estudiante,
+            email: data.email,
+            phone: data.celular_del_papa || data.celular_de_la_mama,
+            // Los campos de sistema y legacy que Zod espera (si no están en DB, Zod usará fallbacks)
+        };
+
         // Parseo Estricto y Resiliente (Data Hydration)
-        const parsed = TruthTableStudentSchema.safeParse(data);
+        const parsed = TruthTableStudentSchema.safeParse(mappedData);
 
         if (parsed.success) {
             return parsed.data;
@@ -49,9 +60,9 @@ export class TruthTableRepository {
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from('Tabla_Verdad_Estudiantes' as any)
+            .from('Tabla_Verdad_Estudiantes')
             .select('*')
-            .ilike('first_name', `%${query}%`)
+            .ilike('nombres_del_estudiante', `%${query}%`)
             .limit(10); // Límite razonable
 
         if (error) {
@@ -64,7 +75,16 @@ export class TruthTableRepository {
         const validStudents: TruthTableStudent[] = [];
 
         for (const row of data) {
-            const parsed = TruthTableStudentSchema.safeParse(row);
+            const mappedData = {
+                id: row.id,
+                document_number: row.numero_de_identificacion,
+                first_name: row.nombres_del_estudiante,
+                last_name: row.apellidos_del_estudiante,
+                email: row.email,
+                phone: row.celular_del_papa || row.celular_de_la_mama,
+            };
+
+            const parsed = TruthTableStudentSchema.safeParse(mappedData);
 
             if (parsed.success) {
                 validStudents.push(parsed.data);
