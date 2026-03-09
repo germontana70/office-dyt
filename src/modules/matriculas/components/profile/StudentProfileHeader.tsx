@@ -55,9 +55,9 @@ export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
 
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10 text-center sm:text-left">
 
-                {/* Avatar Circular interactivo */}
+                {/* Avatar Rectangular interactivo */}
                 <div
-                    className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 group cursor-pointer group rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-secondary hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all duration-300"
+                    className="relative w-28 sm:w-36 aspect-[3/4] shrink-0 group cursor-pointer rounded-2xl p-[2px] bg-gradient-to-br from-primary via-purple-500 to-secondary hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all duration-300"
                     onClick={() => fileInputRef.current?.click()}
                 >
                     {/* Input invisible hookeado al server action */}
@@ -70,9 +70,9 @@ export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
                         disabled={isPending}
                     />
 
-                    <div className="absolute inset-[2px] rounded-full bg-black/80 overflow-hidden">
+                    <div className="absolute inset-[2px] rounded-[14px] bg-black/80 overflow-hidden">
                         {isPending ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 text-white z-20 absolute inset-0 rounded-full">
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 text-white z-20 absolute inset-0 rounded-[14px]">
                                 <svg className="animate-spin h-8 w-8 mb-2 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -98,7 +98,7 @@ export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
                     </div>
 
                     {/* Overlay Upload Foto */}
-                    <div className="absolute inset-[2px] rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white backdrop-blur-sm">
+                    <div className="absolute inset-[2px] rounded-[14px] bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white backdrop-blur-sm">
                         <svg className="w-6 h-6 mb-1 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
