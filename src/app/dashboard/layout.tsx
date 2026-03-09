@@ -2,18 +2,20 @@ import Image from "next/image";
 import { SidebarNav } from "@/ui/components/modules/layout/SidebarNav";
 import { ThemeToggle } from "@/ui/components/modules/layout/ThemeToggle";
 import { ParticleBackground } from "@/ui/components/modules/layout/ParticleBackground";
-
+import { SemesterRepository } from "@/modules/configuracion/repository/semester-repo";
 
 export const metadata = {
     title: "Office DYT - Dones y Talentos",
     description: "Premium Management Dashboard for Dones y Talentos",
 };
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const activeSemester = await SemesterRepository.getActive();
+
     return (
         <div className="min-h-screen antialiased transition-colors duration-500 overflow-hidden relative">
             {/* Fondo cinematográfico global */}
@@ -48,8 +50,10 @@ export default function DashboardLayout({
                         <div className="flex items-center gap-4">
                             {/* Semester Badge (Tenant ID Context) */}
                             <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-md cursor-help pointer-events-auto" title="Semestre académico actual de operación">
-                                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Semestre Activo: 2026-1</span>
+                                <span className={`w-2 h-2 rounded-full ${activeSemester ? 'bg-accent animate-pulse' : 'bg-destructive/50'}`} />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                                    Semestre Activo: {activeSemester ? activeSemester.name : 'VÍNCULO PENDIENTE'}
+                                </span>
                             </div>
                             <ThemeToggle />
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary to-accent ring-2 ring-primary/20 cursor-pointer hover:ring-accent transition-all shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_25px_hsl(var(--accent)/0.4)]" />
