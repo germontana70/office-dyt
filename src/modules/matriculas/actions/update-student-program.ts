@@ -1,29 +1,22 @@
 'use server';
 
-import { createClient } from '@/infra/services/server';
 import { revalidatePath } from 'next/cache';
+import { CurrentStudentRepository } from '../repository/current-student-repo';
+import { CurrentStudent } from '../models/student.schema';
 
-export async function updateStudentProgram(studentId: string, payload: Record<string, any>) {
-    if (!studentId || !payload) return { error: 'Faltan datos.' };
-
+export async function updateStudentProgram(studentId: string, data: Partial<CurrentStudent>) {
     try {
-        const supabase = await createClient();
+        const student = await CurrentStudentRepository.update(studentId, data);
 
-        const { error } = await supabase
-            .from('students')
-            .update(payload)
-            .eq('id', studentId);
-
-        if (error) {
-            console.error('[Supabase Program Save Error]:', error);
-            return { error: 'Error al actualizar el programa en Supabase.' };
+        if (!student) {
+            return { error: 'No se pudo actualizar la información académica' };
         }
 
         revalidatePath(`/dashboard/matriculas/${studentId}`);
+        return { success: true, student };
 
-        return { success: true };
-    } catch (err) {
-        console.error(err);
-        return { error: 'Server throw.' };
+    } catch (e) {
+        console.error(e);
+        return { error: 'Error del sistema al actualizar datos' };
     }
 }

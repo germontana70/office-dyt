@@ -115,4 +115,28 @@ export class CurrentStudentRepository {
 
         return parsed.data;
     }
+
+    /**
+     * Actualización parcial de campos de un estudiante.
+     */
+    static async update(studentId: string, data: Partial<CurrentStudent>): Promise<CurrentStudent | null> {
+        const supabase = await createClient();
+
+        const { data: updatedData, error } = await supabase
+            .from('students')
+            .update(data)
+            .eq('id', studentId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error(`[Supabase Error] Fallo al actualizar estudiante ${studentId}:`, error);
+            throw error;
+        }
+
+        if (!updatedData) return null;
+
+        const parsed = CurrentStudentSchema.safeParse(updatedData);
+        return parsed.success ? parsed.data : null;
+    }
 }

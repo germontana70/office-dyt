@@ -39,7 +39,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="mt-4">
                                 <span className="text-5xl font-bold tracking-tighter text-foreground">342</span>
-                                <p className="text-sm text-green-400 mt-2 font-medium flex items-center">
+                                <p className="text-sm text-accent mt-2 font-bold flex items-center uppercase tracking-widest text-[10px]">
                                     <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                                     +12% este semestre
                                 </p>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-4">
                             <span className="text-5xl font-bold tracking-tighter text-foreground">15</span>
-                            <p className="text-sm text-yellow-500/80 mt-2 font-medium flex items-center">
+                            <p className="text-sm text-accent/80 mt-2 font-bold flex items-center uppercase tracking-widest text-[10px]">
                                 <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 Esperando validación MD5
                             </p>
@@ -68,22 +68,22 @@ export default function DashboardPage() {
                 </GlassCard>
 
                 <GlassCard interactive className="group relative overflow-hidden md:col-span-2 lg:col-span-1">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-green-500/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-accent/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
                     <div className="relative z-10">
-                        <div className="flex items-center gap-4 text-green-400">
+                        <div className="flex items-center gap-4 text-accent">
                             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <h3 className="text-xl font-semibold">Estado del API Route</h3>
                         </div>
                         <div className="mt-4">
-                            <span className="text-2xl font-bold tracking-tight text-foreground block">Sincronización Pasiva</span>
-                            <p className="text-sm text-green-400 mt-2 font-medium">
+                            <span className="text-2xl font-bold tracking-tight text-foreground block uppercase tracking-tighter italic">Sincronización Pasiva</span>
+                            <p className="text-sm text-accent mt-2 font-black uppercase tracking-widest text-[10px]">
                                 Listo para Webhooks de GCP
                             </p>
 
                             <div className="mt-4 h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-green-500 w-full animate-[pulse_2s_ease-in-out_infinite]" />
+                                <div className="h-full bg-accent w-full neon-pulse" />
                             </div>
                         </div>
                     </div>

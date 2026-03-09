@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
 
 export const ParticleBackground = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const { theme } = useTheme();
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -25,15 +27,15 @@ export const ParticleBackground = () => {
             size: number;
             speedX: number;
             speedY: number;
-            colorIndex: number; // 0 for primary (indigo), 1 for secondary (cyan)
+            colorIndex: number; // 0 for primary (Plum), 1 for accent (Cyan)
 
             constructor() {
                 this.x = Math.random() * canvas!.width;
                 this.y = Math.random() * canvas!.height;
                 this.size = Math.random() * 2 + 0.5;
-                this.speedX = (Math.random() - 0.5) * 0.4;
-                this.speedY = (Math.random() - 0.5) * 0.4;
-                this.colorIndex = Math.random() > 0.3 ? 0 : 1;
+                this.speedX = (Math.random() - 0.5) * 0.3;
+                this.speedY = (Math.random() - 0.5) * 0.3;
+                this.colorIndex = Math.random() > 0.4 ? 0 : 1;
             }
 
             update() {
@@ -48,10 +50,20 @@ export const ParticleBackground = () => {
 
             draw() {
                 if (!ctx) return;
-                // Deep indigo vs Pure Cyan mix
-                ctx.fillStyle = this.colorIndex === 0
-                    ? `hsla(var(--primary) / 0.4)`
-                    : `hsla(var(--secondary) / 0.8)`;
+
+                // Color dynamically based on theme
+                const isDark = theme === 'dark';
+
+                if (isDark) {
+                    ctx.fillStyle = this.colorIndex === 0
+                        ? `hsla(var(--primary) / 0.15)`
+                        : `hsla(var(--accent) / 0.3)`;
+                } else {
+                    ctx.fillStyle = this.colorIndex === 0
+                        ? `hsla(var(--primary) / 0.08)`
+                        : `hsla(var(--foreground) / 0.05)`;
+                }
+
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
@@ -60,9 +72,8 @@ export const ParticleBackground = () => {
 
         const init = () => {
             particles = [];
-            // Around 120 nodes for the HUD background
-            const nodeCount = Math.floor((window.innerWidth * window.innerHeight) / 12000);
-            for (let i = 0; i < Math.min(nodeCount, 150); i++) {
+            const nodeCount = Math.floor((window.innerWidth * window.innerHeight) / 10000);
+            for (let i = 0; i < Math.min(nodeCount, 200); i++) {
                 particles.push(new Particle());
             }
         };
@@ -75,16 +86,18 @@ export const ParticleBackground = () => {
                 particles[i].update();
                 particles[i].draw();
 
-                // Draw connecting HUD lines
+                // HUD lines
                 for (let j = i + 1; j < particles.length; j++) {
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 100) {
+                    if (distance < 120) {
                         ctx.beginPath();
-                        ctx.strokeStyle = `hsla(var(--secondary) / ${0.2 - distance / 500})`;
-                        ctx.lineWidth = 0.5;
+                        const isDark = theme === 'dark';
+                        const opacity = (isDark ? 0.15 : 0.05) - distance / 800;
+                        ctx.strokeStyle = `hsla(var(--accent) / ${opacity > 0 ? opacity : 0})`;
+                        ctx.lineWidth = 0.4;
                         ctx.moveTo(particles[i].x, particles[i].y);
                         ctx.lineTo(particles[j].x, particles[j].y);
                         ctx.stroke();
@@ -103,13 +116,14 @@ export const ParticleBackground = () => {
             window.removeEventListener('resize', resize);
             cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [theme]); // Re-init on theme change
 
     return (
         <canvas
             ref={canvasRef}
-            className="fixed inset-0 z-[-2] pointer-events-none"
+            className="fixed inset-0 z-[-2] pointer-events-none opacity-60"
             aria-hidden="true"
         />
     );
 };
+

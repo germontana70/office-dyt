@@ -55,12 +55,12 @@ export function SidebarNav() {
                         className={cn(
                             "group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-500 relative overflow-hidden",
                             isActive
-                                ? "bg-primary/10 text-primary border border-primary/20 shadow-[0_0_20px_rgba(var(--primary),0.1)]"
-                                : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1"
+                                ? "bg-primary/10 text-primary border border-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
+                                : "text-muted-foreground hover:bg-primary/5 hover:text-foreground hover:translate-x-1"
                         )}
                     >
                         {isActive && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary/50 via-primary to-primary/50 shadow-[0_0_10px_hsl(var(--primary))]" />
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-accent/50 via-accent to-accent/50 shadow-[0_0_10px_hsl(var(--accent))]" />
                         )}
                         <div className={cn(
                             "transition-colors duration-300",
