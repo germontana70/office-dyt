@@ -1,5 +1,6 @@
 import { GlassCard } from "@/ui/components/modules/layout/GlassCard";
 import { PremiumButton } from "@/ui/components/modules/buttons/PremiumButton";
+import Link from "next/link";
 import { GradientText } from "@/ui/components/modules/typography/GradientText";
 
 export default function DashboardPage() {
@@ -26,24 +27,26 @@ export default function DashboardPage() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 
-                <GlassCard interactive className="group relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-primary/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-4 text-primary">
-                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            <h3 className="text-xl font-semibold">Estudiantes Activos</h3>
+                <Link href="/dashboard/matriculas" className="block outline-none focus:ring-2 focus:ring-primary/50 rounded-2xl transition-all duration-300">
+                    <GlassCard interactive className="group relative overflow-hidden h-full hover:scale-[1.02] transition-transform cursor-pointer">
+                        <div className="absolute right-0 top-0 w-24 h-24 bg-primary/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-4 text-primary">
+                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <h3 className="text-xl font-semibold">Estudiantes Activos</h3>
+                            </div>
+                            <div className="mt-4">
+                                <span className="text-5xl font-bold tracking-tighter text-foreground">342</span>
+                                <p className="text-sm text-green-400 mt-2 font-medium flex items-center">
+                                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                    +12% este semestre
+                                </p>
+                            </div>
                         </div>
-                        <div className="mt-4">
-                            <span className="text-5xl font-bold tracking-tighter text-foreground">342</span>
-                            <p className="text-sm text-green-400 mt-2 font-medium flex items-center">
-                                <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                                +12% este semestre
-                            </p>
-                        </div>
-                    </div>
-                </GlassCard>
+                    </GlassCard>
+                </Link>
 
                 <GlassCard interactive className="group relative overflow-hidden">
                     <div className="absolute right-0 top-0 w-24 h-24 bg-purple-500/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />

@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import Image from "next/image";
+import { SidebarNav } from "@/ui/components/modules/layout/SidebarNav";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,20 +35,7 @@ export default function DashboardLayout({
                             priority
                         />
                     </div>
-                    <nav className="flex-1 space-y-1 p-4">
-                        <a href="/dashboard" className="flex items-center gap-3 rounded-lg bg-primary/20 px-3 py-2 text-primary-foreground transition-all">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                            Dashboard
-                        </a>
-                        <a href="/dashboard/students" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-white/5 hover:text-white transition-all">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                            Estudiantes
-                        </a>
-                        <a href="/dashboard/payments" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-white/5 hover:text-white transition-all">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            Pagos a Maestros
-                        </a>
-                    </nav>
+                    <SidebarNav />
                 </aside>
 
                 {/* Main Content Area */}
