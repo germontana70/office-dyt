@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CurrentStudent } from '../models/student.schema';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 
@@ -9,6 +10,7 @@ interface StudentSearchSelectProps {
 }
 
 export function StudentSearchSelect({ students }: StudentSearchSelectProps) {
+    const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const [isFocused, setIsFocused] = useState(false);
 
@@ -75,7 +77,10 @@ export function StudentSearchSelect({ students }: StudentSearchSelectProps) {
                                             </p>
                                         </div>
 
-                                        <button className="opacity-0 group-hover:opacity-100 px-3 py-1 bg-primary/20 hover:bg-primary/40 text-primary-foreground text-xs rounded-md transition-all shadow-[0_0_10px_hsl(var(--primary)/0.2)] border border-primary/30">
+                                        <button
+                                            onClick={() => router.push(`/dashboard/matriculas/${student.id}`)}
+                                            className="opacity-0 group-hover:opacity-100 px-3 py-1 bg-primary/20 hover:bg-primary/40 text-primary-foreground text-xs rounded-md transition-all shadow-[0_0_10px_hsl(var(--primary)/0.2)] border border-primary/30"
+                                        >
                                             Gestionar
                                         </button>
                                     </li>

@@ -47,6 +47,40 @@ export class CurrentStudentRepository {
     }
 
     /**
+     * Obtiene un estudiante específico por su ID.
+     */
+    static async getById(studentId: string): Promise<CurrentStudent | null> {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', studentId)
+            .single();
+
+        if (error) {
+            console.error(`[Supabase Error] Fallo al obtener estudiante ${studentId}:`, error);
+            return null;
+        }
+
+        if (!data) return null;
+
+        const rawData = {
+            ...data,
+            semester_enrolled: data.semester_enrolled || data.semester
+        };
+
+        const parsed = CurrentStudentSchema.safeParse(rawData);
+
+        if (parsed.success) {
+            return parsed.data;
+        } else {
+            console.error(`[Zod Error] Registro corrupto (ID: ${data.id}):`, parsed.error.issues);
+            return null;
+        }
+    }
+
+    /**
      * Actualiza el estado de la matrícula de un estudiante (ej. Retiro).
      */
     static async updateStatus(studentId: string, status: CurrentStudent['enrollment_status']): Promise<CurrentStudent | null> {
