@@ -26,8 +26,8 @@ export function StudentSearchSelect({ students }: StudentSearchSelectProps) {
                 </label>
 
                 <div className={`relative rounded-xl border transition-all duration-300 bg-white/5 ${isFocused
-                        ? 'border-primary ring-2 ring-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.2)]'
-                        : 'border-white/10 hover:border-white/20'
+                    ? 'border-primary ring-2 ring-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.2)]'
+                    : 'border-white/10 hover:border-white/20'
                     }`}>
                     {/* Icono Lupa */}
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -48,13 +48,13 @@ export function StudentSearchSelect({ students }: StudentSearchSelectProps) {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onFocus={() => setIsFocused(true)}
-                        onBlur={() => setIsFocused(false)}
+                        onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                     />
                 </div>
 
-                {/* Dropdown flotante si hay texto */}
-                {searchTerm.length > 0 && (
-                    <div className="absolute left-0 right-0 mt-2 p-2 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                {/* Dropdown flotante al enfocar (Combobox behavior) */}
+                {isFocused && (
+                    <div className="absolute left-0 right-0 mt-2 p-2 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.3)] z-50 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 custom-scrollbar">
                         {filtered.length === 0 ? (
                             <div className="p-4 text-center text-sm text-white/40">
                                 No se encontraron coincidencias

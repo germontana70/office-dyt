@@ -13,7 +13,8 @@ export class CurrentStudentRepository {
         const { data, error } = await supabase
             .from('students')
             .select('*')
-            .eq('semester', semester); // En la base actual puede llamarse 'semester', ajustamos en el mapeo si es diferente
+            .eq('semester', semester) // En la base actual puede llamarse 'semester', ajustamos en el mapeo si es diferente
+            .order('first_name', { ascending: true });
 
         if (error) {
             console.error('[Supabase Error] Fallo al obtener students:', error);
