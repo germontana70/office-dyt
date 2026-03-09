@@ -24,7 +24,7 @@ export function ProgramsAndSchedulesTab({ student }: ProgramsAndSchedulesTabProp
     }, 500);
 
     // Mock data para selectores (Fase 2 WIP)
-    const programs = ["Semestre 2026-1", "Personalizado", "Vacacional", "Taller Especial"];
+    const programs = ["Regular", "Personalizado", "Vacacional", "Taller Especial", "Convenio"];
     const instruments = ["Piano", "Guitarra", "Bajo", "Batería", "Canto", "Violín", "Saxofón", "Ukelele"];
     const teachers = ["Andrés García", "Marta Pérez", "Carlos Ruiz", "Sofía López", "Diego Torres", "Lucía Mondragón"];
     const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -54,7 +54,7 @@ export function ProgramsAndSchedulesTab({ student }: ProgramsAndSchedulesTabProp
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Selector de Programa */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] pl-1">Programa / Semestre</label>
+                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] pl-1">Programa Académico</label>
                         <select
                             defaultValue={student.program || ""}
                             onChange={(e) => debouncedSave('program', e.target.value)}
