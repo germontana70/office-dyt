@@ -1,4 +1,3 @@
-import { ParticleBackground } from '@/ui/components/modules/layout/ParticleBackground';
 import { CurrentStudentRepository } from '@/modules/matriculas/repository/current-student-repo';
 import { StudentProfileHeader } from '@/modules/matriculas/components/profile/StudentProfileHeader';
 import { StudentProfileTabs } from '@/modules/matriculas/components/profile/StudentProfileTabs';
@@ -24,9 +23,8 @@ export default async function StudentProfilePage({ params }: PageProps) {
     }
 
     return (
-        <div className="relative min-h-screen w-full bg-background overflow-hidden p-4 sm:p-8 md:p-12">
-            {/* Entorno Cinematográfico Premium */}
-            <ParticleBackground />
+        <div className="relative min-h-screen w-full overflow-hidden p-4 sm:p-8 md:p-12">
+            {/* Gradientes Ambientales */}
             <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[10%] left-[-5%] w-[500px] h-[500px] bg-secondary/15 blur-[180px] rounded-full pointer-events-none" />
 
