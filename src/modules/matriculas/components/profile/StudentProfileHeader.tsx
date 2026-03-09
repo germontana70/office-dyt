@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import { CurrentStudent } from '../../models/student.schema';
-import { useMemo } from 'react';
+import { useMemo, useTransition, useRef } from 'react';
+import { uploadStudentPhoto } from '../../actions/upload-student-photo';
 
 // Si no hay foto en Zod todavía, podemos asumir photo_url opcional o fallback temporal
 interface StudentProfileHeaderProps {
@@ -10,6 +11,24 @@ interface StudentProfileHeaderProps {
 }
 
 export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
+    const [isPending, startTransition] = useTransition();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !student.id) return;
+
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        startTransition(async () => {
+            const res = await uploadStudentPhoto(student.id!, formData);
+            if (res?.error) {
+                console.error("Error subiendo foto:", res.error);
+                alert(res.error);
+            }
+        });
+    };
 
     // Cálculo de la edad
     const computedAge = useMemo(() => {
@@ -37,8 +56,30 @@ export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10 text-center sm:text-left">
 
                 {/* Avatar Circular interactivo */}
-                <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 group cursor-pointer group rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-secondary hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all duration-300">
+                <div
+                    className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 group cursor-pointer group rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-secondary hover:shadow-[0_0_25px_hsl(var(--primary)/0.5)] transition-all duration-300"
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    {/* Input invisible hookeado al server action */}
+                    <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        ref={fileInputRef}
+                        onChange={handleUpload}
+                        disabled={isPending}
+                    />
+
                     <div className="absolute inset-[2px] rounded-full bg-black/80 overflow-hidden">
+                        {isPending ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/50 text-white z-20 absolute inset-0 rounded-full">
+                                <svg className="animate-spin h-8 w-8 mb-2 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        ) : null}
+
                         {student.photo_url ? (
                             <Image
                                 src={student.photo_url}

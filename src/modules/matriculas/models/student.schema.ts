@@ -58,6 +58,13 @@ export const CurrentStudentSchema = z.object({
     // Campos legacy que el Sheet suele enviar
     how_did_you_hear_about_us: emptyToNull,
     medical_conditions: emptyToNull,
+
+    // Storage
+    photo_url: emptyToNull,
+
+    // Datos Adicionales UI
+    contract_number: emptyToNull,
+    guardian_relationship: emptyToNull,
 });
 
 export type CurrentStudent = z.infer<typeof CurrentStudentSchema>;

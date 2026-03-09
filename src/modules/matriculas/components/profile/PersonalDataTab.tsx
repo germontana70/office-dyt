@@ -1,13 +1,28 @@
 'use client';
 
+import { useTransition } from 'react';
 import { CurrentStudent } from '../../models/student.schema';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
+import { useDebouncedCallback } from 'use-debounce';
+import { updatePersonalData } from '../../actions/update-personal-data';
 
 interface PersonalDataTabProps {
     student: CurrentStudent;
 }
 
 export function PersonalDataTab({ student }: PersonalDataTabProps) {
+    const [isPending, startTransition] = useTransition();
+
+    const debouncedSave = useDebouncedCallback((field: string, value: string) => {
+        if (!student.id) return;
+        startTransition(async () => {
+            const res = await updatePersonalData(student.id!, { [field]: value });
+            if (res?.error) {
+                console.error('Error auto-saving:', res.error);
+            }
+        });
+    }, 500);
+
     // Simulación de campos de salud
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -27,6 +42,7 @@ export function PersonalDataTab({ student }: PersonalDataTabProps) {
                         <input
                             type="date"
                             defaultValue={student.birth_date ? new Date(student.birth_date).toISOString().split('T')[0] : ''}
+                            onChange={(e) => debouncedSave('birth_date', e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all font-medium"
                         />
                     </div>
@@ -34,6 +50,7 @@ export function PersonalDataTab({ student }: PersonalDataTabProps) {
                         <label className="text-xs font-semibold text-white/50 uppercase tracking-widest pl-1">Género</label>
                         <select
                             defaultValue={student.gender || ""}
+                            onChange={(e) => debouncedSave('gender', e.target.value)}
                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white appearance-none focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all font-medium"
                         >
                             <option value="">Seleccione...</option>
@@ -52,17 +69,21 @@ export function PersonalDataTab({ student }: PersonalDataTabProps) {
                             type="text"
                             placeholder="Nombre Completo"
                             defaultValue={student.guardian_name || ''}
+                            onChange={(e) => debouncedSave('guardian_name', e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all font-medium"
                         />
                         <input
                             type="tel"
                             placeholder="Teléfono"
                             defaultValue={student.guardian_phone || ''}
+                            onChange={(e) => debouncedSave('guardian_phone', e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all font-medium"
                         />
                         <input
                             type="text"
                             placeholder="Parentesco"
+                            defaultValue={student.guardian_relationship || ''}
+                            onChange={(e) => debouncedSave('guardian_relationship', e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all font-medium"
                         />
                     </div>
@@ -77,6 +98,8 @@ export function PersonalDataTab({ student }: PersonalDataTabProps) {
                 <input
                     type="text"
                     placeholder="Ej. CTR-2026-001"
+                    defaultValue={student.contract_number || ''}
+                    onChange={(e) => debouncedSave('contract_number', e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:ring-2 focus:ring-secondary focus:bg-white/10 transition-all font-mono tracking-widest"
                 />
             </GlassCard>

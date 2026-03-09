@@ -65,8 +65,15 @@ export class CurrentStudentRepository {
 
         if (!data) return null;
 
+        let photo_url = data.photo_url;
+        if (photo_url && !photo_url.startsWith('http')) {
+            const { data: publicUrlData } = supabase.storage.from('student-photos').getPublicUrl(photo_url);
+            photo_url = publicUrlData.publicUrl;
+        }
+
         const rawData = {
             ...data,
+            photo_url,
             semester_enrolled: data.semester_enrolled || data.semester
         };
 
