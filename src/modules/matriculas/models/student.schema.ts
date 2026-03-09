@@ -65,6 +65,14 @@ export const CurrentStudentSchema = z.object({
     // Datos Adicionales UI
     contract_number: emptyToNull,
     guardian_relationship: emptyToNull,
+
+    // Fase 2: Programas y Horarios
+    program: emptyToNull,
+    instrument: emptyToNull,
+    teacher: emptyToNull,
+    class_day: emptyToNull,
+    class_time: emptyToNull,
+    observations: emptyToNull,
 });
 
 export type CurrentStudent = z.infer<typeof CurrentStudentSchema>;
