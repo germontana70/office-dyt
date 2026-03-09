@@ -1,5 +1,3 @@
-import { Suspense } from 'react';
-import { ParticleBackground } from '@/ui/components/modules/layout/ParticleBackground';
 import { CurrentStudentRepository } from '@/modules/matriculas/repository/current-student-repo';
 import { EnrollmentStats } from '@/modules/matriculas/components/EnrollmentStats';
 import { StudentSearchSelect } from '@/modules/matriculas/components/StudentSearchSelect';
@@ -16,9 +14,6 @@ export default async function MatriculasPage() {
 
     return (
         <div className="relative min-h-screen w-full overflow-hidden p-6 md:p-10">
-            {/* Fondo cinematográfico espacial */}
-            <ParticleBackground />
-
             {/* Gradientes y resplandores base (Glassmorphism Environment) */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
             <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-secondary/10 blur-[150px] rounded-full pointer-events-none" />

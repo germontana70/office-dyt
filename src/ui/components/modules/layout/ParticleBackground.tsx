@@ -32,9 +32,9 @@ export const ParticleBackground = () => {
                 line: 'rgba(0, 237, 255, 0.15)'
             },
             light: {
-                primary: '#6c1f77', // Morado Ciruela Profundo
-                accent: '#00EDFF',  // Cyan
-                line: 'rgba(108, 31, 119, 0.05)'
+                primary: '#4a154b', // Morado Ciruela Profundo (Más oscuro para contraste)
+                accent: '#008b8b',  // Cyan Oscuro (Para contraste en blanco)
+                line: 'rgba(74, 21, 75, 0.1)'
             }
         };
 
@@ -77,7 +77,7 @@ export const ParticleBackground = () => {
             draw() {
                 if (!ctx) return;
                 ctx.fillStyle = this.color;
-                ctx.globalAlpha = resolvedTheme === 'dark' ? 0.4 : 0.2;
+                ctx.globalAlpha = resolvedTheme === 'dark' ? 0.4 : 0.5; // Aumento de opacidad en light mode
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();

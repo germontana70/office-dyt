@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { SidebarNav } from "@/ui/components/modules/layout/SidebarNav";
 import { ThemeToggle } from "@/ui/components/modules/layout/ThemeToggle";
+import { ParticleBackground } from "@/ui/components/modules/layout/ParticleBackground";
 
 
 export const metadata = {
@@ -14,7 +15,10 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen antialiased transition-colors duration-500">
+        <div className="min-h-screen antialiased transition-colors duration-500 overflow-hidden relative">
+            {/* Fondo cinematográfico global */}
+            <ParticleBackground />
+
             {/* Background elements for depth - DYT Brand Version */}
             <div className="fixed inset-0 z-[-1]">
                 <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-primary/10 blur-[100px]" />
