@@ -38,7 +38,7 @@ export default function DashboardLayout({
                 </aside>
 
                 {/* Main Content Area */}
-                <main className="flex-1 flex flex-col bg-background/40 backdrop-blur-[2px]">
+                <main className="flex-1 flex flex-col bg-background/20 backdrop-blur-[4px]">
                     <header className="flex h-16 items-center gap-4 border-b border-primary/5 bg-background/20 backdrop-blur-md px-6">
                         <div className="flex-1" />
                         <div className="flex items-center gap-4">

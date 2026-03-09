@@ -15,7 +15,7 @@ export default async function MatriculasPage() {
     const students = await CurrentStudentRepository.getAllBySemester(SEMESTER);
 
     return (
-        <div className="relative min-h-screen w-full bg-background overflow-hidden p-6 md:p-10">
+        <div className="relative min-h-screen w-full overflow-hidden p-6 md:p-10">
             {/* Fondo cinematográfico espacial */}
             <ParticleBackground />
 
@@ -29,11 +29,11 @@ export default async function MatriculasPage() {
                 <header className="space-y-4 animate-in slide-in-from-top-6 fade-in duration-700">
                     <div className="flex items-center gap-3">
                         <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_15px_hsl(var(--primary))]" />
-                        <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-md">
+                        <h1 className="text-3xl font-black tracking-tighter text-foreground drop-shadow-md uppercase italic">
                             Gestión de Matrículas
                         </h1>
                     </div>
-                    <p className="text-white/60 text-sm max-w-xl leading-relaxed">
+                    <p className="text-muted-foreground text-sm max-w-xl leading-relaxed font-medium">
                         Busque un estudiante existente para asignar o modificar su matrícula. Todo cambio aquí se sincroniza con Central Engine.
                     </p>
                 </header>
@@ -51,7 +51,7 @@ export default async function MatriculasPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                             </div>
-                            <span className="font-semibold text-white/90 group-hover:text-white">Reintegrar Estudiante</span>
+                            <span className="font-bold text-foreground/90 group-hover:text-primary transition-colors uppercase tracking-widest text-[11px]">Reintegrar Estudiante</span>
                         </div>
                         <span className="text-primary/70 group-hover:translate-x-1 transition-transform">→</span>
                     </GlassCard>
@@ -64,7 +64,7 @@ export default async function MatriculasPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </div>
-                            <span className="font-semibold text-white/90 group-hover:text-white">Retirar del Semestre</span>
+                            <span className="font-bold text-foreground/90 group-hover:text-destructive transition-colors uppercase tracking-widest text-[11px]">Retirar del Semestre</span>
                         </div>
                         <span className="text-destructive/70 group-hover:translate-x-1 transition-transform">→</span>
                     </GlassCard>

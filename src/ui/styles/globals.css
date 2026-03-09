@@ -30,34 +30,23 @@
     /* MODO CLARO ("Dones y Talentos - Día") */
     --background: 260 20% 98%;
     --foreground: 280 50% 10%;
-
     --card: 260 20% 100%;
     --card-foreground: 280 50% 10%;
-
     --popover: 260 20% 100%;
     --popover-foreground: 280 50% 10%;
-
-    /* Brand Purple (Ciruela) */
     --primary: 280 75% 45%;
     --primary-foreground: 0 0% 100%;
-
-    /* Neon Cyan */
     --accent: 185 100% 45%;
     --accent-foreground: 280 50% 10%;
-
     --secondary: 270 30% 92%;
     --secondary-foreground: 280 75% 45%;
-
     --muted: 260 15% 94%;
     --muted-foreground: 280 20% 45%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 280 20% 90%;
     --input: 280 20% 90%;
     --ring: 185 100% 45%;
-
     --radius: 1.25rem;
   }
 
@@ -65,30 +54,20 @@
     /* MODO OSCURO ("Dones y Talentos - Noche") */
     --background: 240 10% 4%;
     --foreground: 260 20% 95%;
-
     --card: 240 10% 7%;
     --card-foreground: 260 20% 95%;
-
     --popover: 240 10% 5%;
     --popover-foreground: 260 20% 95%;
-
-    /* Brand Purple (Vibrante) */
     --primary: 280 85% 60%;
     --primary-foreground: 240 10% 4%;
-
-    /* Neon Cyan Acento */
     --accent: 185 100% 50%;
     --accent-foreground: 240 10% 4%;
-
     --secondary: 280 40% 15%;
     --secondary-foreground: 280 85% 60%;
-
     --muted: 240 10% 12%;
     --muted-foreground: 260 10% 65%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 280 30% 15%;
     --input: 280 30% 15%;
     --ring: 185 100% 50%;
@@ -102,25 +81,24 @@
 
   body {
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image: radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent),
-      radial-gradient(circle at bottom right, hsl(var(--accent) / 0.05), transparent);
+    background-image: radial-gradient(circle at top left, hsl(var(--primary)/0.08), transparent),
+      radial-gradient(circle at bottom right, hsl(var(--accent)/0.05), transparent);
   }
 }
 
-/* Glassmorphism Utilities - DYT Edition */
 @layer utilities {
   .glass-panel {
     @apply bg-white/30 dark:bg-black/40 backdrop-blur-2xl border border-white/20 dark:border-primary/10 transition-colors duration-500;
-    box-shadow: 0 8px 32px 0 hsl(var(--primary) / 0.08);
+    box-shadow: 0 8px 32px 0 hsl(var(--primary)/0.08);
   }
 
   .glass-panel-hover {
-    @apply transition-all duration-500 hover:bg-white/40 dark:hover:bg-primary/10 hover:-translate-y-1.5 hover:border-accent/40 hover:shadow-[0_0_40px_rgba(var(--accent), 0.2)];
+    @apply transition-all duration-500 hover:bg-white/40 dark:hover:bg-primary/10 hover:-translate-y-1.5 hover:border-accent/40;
     cursor: pointer;
   }
 
   .glass-panel-hover:hover {
-    box-shadow: 0 12px 40px 0 hsl(var(--accent) / 0.2);
+    box-shadow: 0 12px 40px 0 hsl(var(--accent)/0.2);
   }
 
   .neon-pulse {
@@ -132,12 +110,12 @@
     0%,
     100% {
       opacity: 1;
-      filter: drop-shadow(0 0 2px hsl(var(--accent))) drop-shadow(0 0 8px hsl(var(--accent) / 0.5));
+      filter: drop-shadow(0 0 2px hsl(var(--accent))) drop-shadow(0 0 8px hsl(var(--accent)/0.5));
     }
 
     50% {
       opacity: .6;
-      filter: drop-shadow(0 0 1px hsl(var(--accent))) drop-shadow(0 0 4px hsl(var(--accent) / 0.3));
+      filter: drop-shadow(0 0 1px hsl(var(--accent))) drop-shadow(0 0 4px hsl(var(--accent)/0.3));
     }
   }
 }
