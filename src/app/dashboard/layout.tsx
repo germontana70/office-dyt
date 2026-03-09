@@ -46,6 +46,11 @@ export default function DashboardLayout({
                     <header className="flex h-16 items-center gap-4 border-b border-primary/5 px-6 z-20 bg-white/10 dark:bg-black/20 backdrop-blur-md">
                         <div className="flex-1" />
                         <div className="flex items-center gap-4">
+                            {/* Semester Badge (Tenant ID Context) */}
+                            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-md cursor-help pointer-events-auto" title="Semestre académico actual de operación">
+                                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Semestre Activo: 2026-1</span>
+                            </div>
                             <ThemeToggle />
                             <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary to-accent ring-2 ring-primary/20 cursor-pointer hover:ring-accent transition-all shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_25px_hsl(var(--accent)/0.4)]" />
                         </div>
