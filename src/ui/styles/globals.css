@@ -27,65 +27,69 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 10% 10%;
+    /* MODO CLARO ("Orquesta de Día") - Parchment/Cream Base */
+    --background: 40 20% 96%;
+    --foreground: 25 30% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 10% 10%;
+    --card: 40 20% 98%;
+    --card-foreground: 25 30% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 10%;
+    --popover: 40 20% 98%;
+    --popover-foreground: 25 30% 12%;
 
-    --primary: 270 90% 40%;
-    --primary-foreground: 0 0% 100%;
+    /* Bronze/Cobre Primary */
+    --primary: 25 40% 45%;
+    --primary-foreground: 40 20% 98%;
 
-    --secondary: 190 100% 50%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 35 50% 50%;
+    --secondary-foreground: 25 30% 12%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 15% 90%;
+    --muted-foreground: 25 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 38 40% 85%;
+    --accent-foreground: 25 30% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --border: 38 30% 85%;
+    --input: 38 30% 85%;
+    --ring: 25 40% 45%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 210 40% 98%;
+    /* MODO OSCURO ("Orquesta Nocturna") - Deep Charcoal/Espresso Base */
+    --background: 20 10% 4%;
+    --foreground: 38 20% 95%;
 
-    --card: 280 15% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 20 10% 8%;
+    --card-foreground: 38 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 20 10% 6%;
+    --popover-foreground: 38 20% 95%;
 
-    --primary: 270 95% 65%;
-    --primary-foreground: 0 0% 100%;
+    /* Gold/Bronze Primary */
+    --primary: 38 45% 55%;
+    --primary-foreground: 20 10% 5%;
 
-    --secondary: 190 100% 50%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 25 40% 45%;
+    --secondary-foreground: 38 20% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 20 10% 12%;
+    --muted-foreground: 38 10% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 38 30% 20%;
+    --accent-foreground: 38 45% 55%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 12%;
-    --input: 240 10% 12%;
-    --ring: 260 85% 60%;
+    --border: 38 30% 15%;
+    --input: 38 30% 15%;
+    --ring: 38 45% 55%;
   }
 }
 
@@ -96,22 +100,24 @@
 
   body {
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-image: radial-gradient(circle at top left, hsl(var(--primary) / 0.05), transparent),
+                      radial-gradient(circle at bottom right, hsl(var(--primary) / 0.08), transparent);
   }
 }
 
-/* Glassmorphism Utilities */
+/* Glassmorphism Utilities Orchestra Edition */
 @layer utilities {
   .glass-panel {
-    @apply bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10;
-    box-shadow: 0 8px 32px 0 hsl(var(--primary) / 0.07);
+    @apply bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-primary/10 transition-colors duration-300;
+    box-shadow: 0 8px 32px 0 hsl(var(--primary) / 0.05);
   }
 
   .glass-panel-hover {
-    @apply transition-all duration-300 hover:bg-white/50 dark:hover:bg-white/5 hover:-translate-y-1;
+    @apply transition-all duration-500 hover:bg-white/50 dark:hover:bg-primary/5 hover:-translate-y-1 hover:border-primary/30;
     cursor: pointer;
   }
 
   .glass-panel-hover:hover {
-    box-shadow: 0 8px 32px 0 hsl(var(--primary) / 0.15);
+    box-shadow: 0 12px 40px 0 hsl(var(--primary) / 0.15);
   }
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import '@/ui/styles/globals.css';
+import { ThemeProvider } from '@/ui/providers/ThemeProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
@@ -16,9 +17,16 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="es" className={`${inter.variable} ${outfit.variable} dark`}>
-            <body className="antialiased bg-background text-foreground">
-                {children}
+        <html lang="es" suppressHydrationWarning>
+            <body className={`${inter.variable} ${outfit.variable} antialiased bg-background text-foreground transition-colors duration-300`}>
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="dark"
+                    enableSystem
+                    disableTransitionOnChange
+                >
+                    {children}
+                </ThemeProvider>
             </body>
         </html>
     );

@@ -49,9 +49,9 @@ export default function DashboardPage() {
                 </Link>
 
                 <GlassCard interactive className="group relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-purple-500/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-secondary/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
                     <div className="relative z-10">
-                        <div className="flex items-center gap-4 text-purple-400">
+                        <div className="flex items-center gap-4 text-secondary">
                             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-4">
                             <span className="text-5xl font-bold tracking-tighter text-foreground">15</span>
-                            <p className="text-sm text-yellow-400 mt-2 font-medium flex items-center">
+                            <p className="text-sm text-yellow-500/80 mt-2 font-medium flex items-center">
                                 <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 Esperando validación MD5
                             </p>
