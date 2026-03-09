@@ -8,13 +8,13 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-    params: {
+    params: Promise<{
         studentId: string;
-    };
+    }>;
 }
 
 export default async function StudentProfilePage({ params }: PageProps) {
-    const { studentId } = params;
+    const { studentId } = await params;
 
     // Hidratación segura con Zod
     const student = await CurrentStudentRepository.getById(studentId);
