@@ -73,6 +73,16 @@ export const CurrentStudentSchema = z.object({
     class_day: emptyToNull,
     class_time: emptyToNull,
     observations: emptyToNull,
+
+    // Fase 3: Gestión Financiera
+    enrollment_fee: z.coerce.number().nullable().catch(null),
+    shirt_fee: z.coerce.number().nullable().catch(null),
+    shirt_size: emptyToNull,
+    financial_notes: emptyToNull,
+    payment_method: emptyToNull,
+    discount_percentage: z.coerce.number().nullable().catch(null),
+    payment_start_date: safeDateTransform,
+    tuition_fee: z.coerce.number().nullable().catch(null),
 });
 
 export type CurrentStudent = z.infer<typeof CurrentStudentSchema>;

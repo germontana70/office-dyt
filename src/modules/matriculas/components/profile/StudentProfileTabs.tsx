@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PersonalDataTab } from './PersonalDataTab';
 import { ProgramsAndSchedulesTab } from './ProgramsAndSchedulesTab';
+import { FinancialTab } from './FinancialTab';
 import { CurrentStudent } from '../../models/student.schema';
 
 interface StudentProfileTabsProps {
@@ -51,14 +52,7 @@ export function StudentProfileTabs({ student }: StudentProfileTabsProps) {
             <div className="mt-8 transition-opacity duration-300">
                 {activeTab === 'personal' && <PersonalDataTab student={student} />}
                 {activeTab === 'programs' && <ProgramsAndSchedulesTab student={student} />}
-
-                {/* Placeholders Fase 2/3 */}
-                {activeTab === 'finances' && (
-                    <div className="p-12 text-center rounded-2xl bg-black/20 border border-white/5 animate-pulse">
-                        <span className="text-4xl">🚧</span>
-                        <p className="mt-4 text-white/50 font-bold uppercase tracking-widest text-sm">Módulo en Construcción (Fase 2)</p>
-                    </div>
-                )}
+                {activeTab === 'finances' && <FinancialTab student={student} />}
             </div>
 
         </div>
