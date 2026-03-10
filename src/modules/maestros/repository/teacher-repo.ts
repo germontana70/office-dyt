@@ -6,6 +6,12 @@ export interface Teacher {
     instrument: string | null;
     hourly_rate: number | null;
     phone: string | null;
+    email: string | null;
+    document_number: string | null;
+    address: string | null;
+    bank_account: string | null;
+    nickname_1: string | null;
+    nickname_2: string | null;
     is_active: boolean;
     created_at?: string;
 }
@@ -38,6 +44,24 @@ export class TeacherRepository {
 
         if (error) {
             console.error('[Supabase Error] Fallo al crear maestro:', error);
+            throw error;
+        }
+
+        return data;
+    }
+
+    static async update(id: string, teacherData: Partial<Omit<Teacher, 'id' | 'created_at'>>): Promise<Teacher | null> {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from('teachers')
+            .update(teacherData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[Supabase Error] Fallo al actualizar maestro:', error);
             throw error;
         }
 

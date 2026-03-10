@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { TeacherRepository } from '../repository/teacher-repo';
 
-export async function createTeacher(formData: FormData) {
+export async function updateTeacher(id: string, formData: FormData) {
     try {
         const name = formData.get('name') as string;
         const instrument = formData.get('instrument') as string;
@@ -22,7 +22,7 @@ export async function createTeacher(formData: FormData) {
 
         const hourly_rate = hourly_rate_str ? parseFloat(hourly_rate_str) : null;
 
-        const newTeacher = await TeacherRepository.create({
+        const updatedTeacher = await TeacherRepository.update(id, {
             name,
             instrument: instrument || null,
             hourly_rate: isNaN(hourly_rate as number) ? null : hourly_rate,
@@ -35,14 +35,14 @@ export async function createTeacher(formData: FormData) {
             nickname_2: nickname_2 || null
         });
 
-        if (!newTeacher) {
-            return { error: 'Fallo al insertar en base de datos' };
+        if (!updatedTeacher) {
+            return { error: 'Fallo al actualizar en base de datos' };
         }
 
         revalidatePath('/dashboard/maestros');
         return { success: true };
     } catch (e: any) {
-        console.error('[Action Error] Fallo al crear maestro:', e);
+        console.error('[Action Error] Fallo al actualizar maestro:', e);
         return { error: e.message || 'Error interno del servidor' };
     }
 }

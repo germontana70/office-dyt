@@ -1,6 +1,6 @@
 import { TeacherRepository } from '@/modules/maestros/repository/teacher-repo';
-import { TeacherGridCard } from '@/modules/maestros/components/TeacherGridCard';
-import { CreateTeacherModal } from '@/modules/maestros/components/CreateTeacherModal';
+import { TeacherGrid } from '@/modules/maestros/components/TeacherGrid';
+import { TeacherFormModal } from '@/modules/maestros/components/TeacherFormModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,29 +33,13 @@ export default async function MaestrosPage() {
                             <span className="text-xl font-black italic tracking-tighter text-accent">{teachers.length}</span>
                             <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Totales</span>
                         </div>
-                        <CreateTeacherModal />
+                        <TeacherFormModal />
                     </div>
                 </header>
 
                 {/* Grid Visual de Maestros */}
                 <section className="animate-in slide-in-from-bottom-8 fade-in duration-700 delay-150 fill-mode-both">
-                    {teachers.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-16 border border-white/5 bg-black/20 backdrop-blur-md rounded-3xl group">
-                            <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_30px_hsl(var(--accent)/0.2)]">
-                                <svg className="w-10 h-10 text-accent/50 group-hover:text-accent transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-black uppercase tracking-widest text-muted-foreground mb-2">No hay maestros registrados</h3>
-                            <p className="text-sm text-muted-foreground/50 font-medium">Usa el botón superior para dar de alta al primer docente.</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {teachers.map(teacher => (
-                                <TeacherGridCard key={teacher.id} teacher={teacher} />
-                            ))}
-                        </div>
-                    )}
+                    <TeacherGrid initialTeachers={teachers} />
                 </section>
 
             </main>
