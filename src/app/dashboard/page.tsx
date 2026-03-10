@@ -3,8 +3,20 @@ import { PremiumButton } from "@/ui/components/modules/buttons/PremiumButton";
 import Link from "next/link";
 import { GradientText } from "@/ui/components/modules/typography/GradientText";
 import { SyncButton } from "./components/SyncButton";
+import { CurrentStudentRepository } from '@/modules/matriculas/repository/current-student-repo';
+import { TeacherRepository } from '@/modules/maestros/repository/teacher-repo';
+import { getActiveSemesterName } from '@/modules/configuracion/actions/set-active-semester';
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+    const activeSemester = await getActiveSemesterName();
+    let studentCount = 0;
+    if (activeSemester) {
+        const students = await CurrentStudentRepository.getAllBySemester(activeSemester);
+        studentCount = students.length;
+    }
+
+    const teachers = await TeacherRepository.getAll();
+    const activeTeachersCount = teachers.filter(t => t.is_active).length;
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out relative">
             {/* Gradientes locales para profundidad extra */}
@@ -37,34 +49,36 @@ export default function DashboardPage() {
                                 <h3 className="text-xl font-black uppercase italic tracking-tighter text-foreground">Matrículas Activas</h3>
                             </div>
                             <div className="mt-6">
-                                <span className="text-6xl font-black tracking-tighter text-foreground drop-shadow-sm italic">342</span>
+                                <span className="text-6xl font-black tracking-tighter text-foreground drop-shadow-sm italic">{studentCount}</span>
                                 <p className="text-accent mt-3 font-black flex items-center uppercase tracking-[0.2em] text-[10px]">
                                     <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                                    +12% este semestre
+                                    En Semestre Activo
                                 </p>
                             </div>
                         </div>
                     </GlassCard>
                 </Link>
 
-                <GlassCard interactive className="group relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-secondary/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-4 text-secondary">
-                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                            </svg>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter text-foreground">Staging (Nuevos)</h3>
+                <Link href="/dashboard/maestros" className="block outline-none focus:ring-2 focus:ring-secondary/50 rounded-2xl transition-all duration-300">
+                    <GlassCard interactive className="group relative overflow-hidden h-full hover:scale-[1.02] transition-transform cursor-pointer">
+                        <div className="absolute right-0 top-0 w-24 h-24 bg-secondary/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-4 text-secondary">
+                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-foreground">Docentes Activos</h3>
+                            </div>
+                            <div className="mt-6">
+                                <span className="text-6xl font-black tracking-tighter text-foreground drop-shadow-sm italic">{activeTeachersCount}</span>
+                                <p className="text-primary mt-3 font-black flex items-center uppercase tracking-[0.2em] text-[10px]">
+                                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    Plantilla Disponible
+                                </p>
+                            </div>
                         </div>
-                        <div className="mt-6">
-                            <span className="text-6xl font-black tracking-tighter text-foreground drop-shadow-sm italic">15</span>
-                            <p className="text-primary mt-3 font-black flex items-center uppercase tracking-[0.2em] text-[10px]">
-                                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                Esperando validación central
-                            </p>
-                        </div>
-                    </div>
-                </GlassCard>
+                    </GlassCard>
+                </Link>
 
                 <GlassCard interactive className="group relative overflow-hidden md:col-span-2 lg:col-span-1">
                     <div className="absolute right-0 top-0 w-24 h-24 bg-accent/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
