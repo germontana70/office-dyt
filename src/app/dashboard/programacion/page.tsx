@@ -1,9 +1,30 @@
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { ScheduleClassModal } from '@/modules/programacion/components/ScheduleClassModal';
+import { TeacherRepository } from '@/modules/maestros/repository/teacher-repo';
+import { StudentRepository } from '@/modules/matriculas/repository/student-repo';
+import { CalendarEventRepository } from '@/modules/programacion/repository/calendar-event-repo';
+import { getActiveSemesterName } from '@/modules/configuracion/actions/set-active-semester';
+import { ClassCard } from '@/modules/programacion/components/ClassCard';
 
 export const dynamic = 'force-dynamic';
 
-export default function ProgramacionPage() {
+export default async function ProgramacionPage() {
+    const teachers = await TeacherRepository.getAll();
+    const rawStudents = await StudentRepository.getActiveBasic();
+
+    // Map to the expected type for the Modal
+    const students = rawStudents.map(s => ({
+        id: s.id,
+        full_name: `${s.first_name} ${s.last_name}`
+    }));
+
+    // Fetch Schedule Data
+    const activeSemesterName = await getActiveSemesterName();
+    const allEvents = activeSemesterName ? await CalendarEventRepository.getBySemester(activeSemesterName) : [];
+
+    // Filter events by day (for now, simply default to 'Lunes', in the future we'll use URL params)
+    const selectedDay = 'Lunes';
+    const displayedEvents = allEvents.filter(e => e.day_of_week === selectedDay);
     return (
         <div className="relative min-h-screen w-full overflow-hidden p-6 md:p-10">
             {/* Gradientes y resplandores base (Glassmorphism Environment) */}
@@ -27,7 +48,7 @@ export default function ProgramacionPage() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <ScheduleClassModal />
+                        <ScheduleClassModal teachers={teachers} students={students} />
                     </div>
                 </header>
 
@@ -77,17 +98,34 @@ export default function ProgramacionPage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 flex flex-col items-center justify-center p-10 border border-dashed border-white/10 rounded-2xl bg-black/20">
-                                <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_hsl(var(--accent)/0.2)] animate-pulse">
-                                    <svg className="w-8 h-8 text-accent opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
+                            {displayedEvents.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center p-10 border border-dashed border-white/10 rounded-2xl bg-black/20">
+                                    <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_hsl(var(--accent)/0.2)] animate-pulse">
+                                        <svg className="w-8 h-8 text-accent opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-xl font-black uppercase tracking-widest text-muted-foreground mb-2 italic">Lienzo Vacío</h3>
+                                    <p className="text-sm text-muted-foreground/60 font-medium max-w-xs text-center">
+                                        No hay clases programadas para este día en el semestre activo.
+                                    </p>
                                 </div>
-                                <h3 className="text-xl font-black uppercase tracking-widest text-muted-foreground mb-2 italic">Lienzo Vacío</h3>
-                                <p className="text-sm text-muted-foreground/60 font-medium max-w-xs text-center">
-                                    El grid horario se dibujará aquí dinámicamente según la parametrización seleccionada.
-                                </p>
-                            </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-10">
+                                        {displayedEvents.map(event => {
+                                            const student = students.find(s => s.id === event.student_id);
+                                            return (
+                                                <ClassCard
+                                                    key={event.id}
+                                                    event={event}
+                                                    studentName={student?.full_name}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </GlassCard>
                     </div>
 

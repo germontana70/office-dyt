@@ -20,3 +20,13 @@ export async function setActiveSemester(semesterId: string) {
         return { error: e.message || 'Error del sistema' };
     }
 }
+
+export async function getActiveSemesterName() {
+    try {
+        const semester = await SemesterRepository.getActive();
+        return semester?.name || null;
+    } catch (e: any) {
+        console.error('[Action Error] Fallo al obtener nombre de semestre activo:', e);
+        return null;
+    }
+}

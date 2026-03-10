@@ -1,16 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { PremiumButton } from '@/ui/components/modules/buttons/PremiumButton';
+import { scheduleClass } from '../actions/schedule-class';
+import { Teacher } from '@/modules/maestros/repository/teacher-repo';
+// TODO: Replace with real student type when available
+interface StudentParams { id: string; full_name: string; }
 
-export function ScheduleClassModal() {
+interface Props {
+    teachers: Teacher[];
+    students: StudentParams[];
+}
+
+export function ScheduleClassModal({ teachers, students }: Props) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // UI ONLY for now
-        setIsOpen(false);
+        setError(null);
+
+        const form = e.currentTarget;
+        const formData = new FormData(form);
+
+        startTransition(async () => {
+            const res = await scheduleClass(formData);
+            if (res.error) {
+                setError(res.error);
+            } else {
+                setIsOpen(false);
+                form.reset();
+            }
+        });
     };
 
     return (
@@ -52,12 +75,15 @@ export function ScheduleClassModal() {
                                         Estudiante
                                     </label>
                                     <select
+                                        name="student_id"
                                         required
+                                        disabled={isPending}
                                         className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-accent focus:border-accent/50 transition-all font-bold appearance-none"
                                     >
                                         <option value="">Seleccionar estudiante...</option>
-                                        <option value="test1">Juan Pérez</option>
-                                        <option value="test2">María Gómez</option>
+                                        {students.map(s => (
+                                            <option key={s.id} value={s.id}>{s.full_name}</option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -66,12 +92,15 @@ export function ScheduleClassModal() {
                                         Docente
                                     </label>
                                     <select
+                                        name="teacher_id"
                                         required
+                                        disabled={isPending}
                                         className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-accent focus:border-accent/50 transition-all font-bold appearance-none"
                                     >
                                         <option value="">Seleccionar docente...</option>
-                                        <option value="doc1">Andrés García</option>
-                                        <option value="doc2">Marta Pérez</option>
+                                        {teachers.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name} {t.instrument ? `(${t.instrument})` : ''}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -82,16 +111,18 @@ export function ScheduleClassModal() {
                                         Día
                                     </label>
                                     <select
+                                        name="day_of_week"
                                         required
+                                        disabled={isPending}
                                         className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-accent focus:border-accent/50 transition-all font-bold appearance-none"
                                     >
                                         <option value="">Día...</option>
-                                        <option value="lunes">Lunes</option>
-                                        <option value="martes">Martes</option>
-                                        <option value="miercoles">Miércoles</option>
-                                        <option value="jueves">Jueves</option>
-                                        <option value="viernes">Viernes</option>
-                                        <option value="sabado">Sábado</option>
+                                        <option value="Lunes">Lunes</option>
+                                        <option value="Martes">Martes</option>
+                                        <option value="Miércoles">Miércoles</option>
+                                        <option value="Jueves">Jueves</option>
+                                        <option value="Viernes">Viernes</option>
+                                        <option value="Sábado">Sábado</option>
                                     </select>
                                 </div>
 
@@ -101,7 +132,9 @@ export function ScheduleClassModal() {
                                     </label>
                                     <input
                                         type="time"
+                                        name="start_time"
                                         required
+                                        disabled={isPending}
                                         className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-accent focus:border-accent/50 transition-all font-bold font-mono"
                                         style={{ colorScheme: 'dark' }}
                                     />
@@ -113,7 +146,9 @@ export function ScheduleClassModal() {
                                     </label>
                                     <input
                                         type="time"
+                                        name="end_time"
                                         required
+                                        disabled={isPending}
                                         className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-accent focus:border-accent/50 transition-all font-bold font-mono"
                                         style={{ colorScheme: 'dark' }}
                                     />
@@ -125,19 +160,24 @@ export function ScheduleClassModal() {
                                     Tipo de Clase
                                 </label>
                                 <select
+                                    name="class_type"
                                     required
+                                    disabled={isPending}
                                     className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-accent focus:border-accent/50 transition-all font-bold appearance-none"
                                 >
                                     <option value="">Seleccionar tipo...</option>
-                                    <option value="regular">Regular</option>
-                                    <option value="reposicion">Reposición</option>
-                                    <option value="taller">Taller</option>
+                                    <option value="Regular">Regular</option>
+                                    <option value="Reposición">Reposición</option>
+                                    <option value="Taller">Taller</option>
                                 </select>
                             </div>
+
+                            {error && <p className="text-xs font-bold text-destructive animate-in slide-in-from-top-2">{error}</p>}
 
                             <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
                                 <button
                                     type="button"
+                                    disabled={isPending}
                                     onClick={() => setIsOpen(false)}
                                     className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
                                 >
@@ -145,9 +185,17 @@ export function ScheduleClassModal() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-accent-foreground bg-accent/80 hover:bg-accent shadow-[0_0_20px_hsl(var(--accent)/0.5)] border border-accent/50 rounded-xl transition-all flex items-center justify-center min-w-[140px]"
+                                    disabled={isPending}
+                                    className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-accent-foreground bg-accent/80 hover:bg-accent shadow-[0_0_20px_hsl(var(--accent)/0.5)] border border-accent/50 rounded-xl transition-all flex items-center justify-center min-w-[140px] disabled:opacity-50"
                                 >
-                                    Guardar Clase
+                                    {isPending ? (
+                                        <>
+                                            <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin mr-2" />
+                                            <span>Guardando</span>
+                                        </>
+                                    ) : (
+                                        'Agendar Clase'
+                                    )}
                                 </button>
                             </div>
                         </form>
