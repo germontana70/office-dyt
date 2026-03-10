@@ -2,8 +2,8 @@ import { createClient } from '@/infra/services/server';
 
 export interface Teacher {
     id: string;
-    full_name: string;
-    specialty: string | null;
+    name: string;
+    instrument: string | null;
     hourly_rate: number | null;
     phone: string | null;
     is_active: boolean;
@@ -16,7 +16,7 @@ export class TeacherRepository {
         const { data, error } = await supabase
             .from('teachers')
             .select('*')
-            .order('full_name', { ascending: true });
+            .order('name', { ascending: true });
 
         if (error) {
             console.error('[Supabase Error] Fallo al obtener maestros:', error);

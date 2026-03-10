@@ -5,20 +5,20 @@ import { TeacherRepository } from '../repository/teacher-repo';
 
 export async function createTeacher(formData: FormData) {
     try {
-        const full_name = formData.get('full_name') as string;
-        const specialty = formData.get('specialty') as string;
+        const name = formData.get('full_name') as string;
+        const instrument = formData.get('specialty') as string;
         const hourly_rate_str = formData.get('hourly_rate') as string;
         const phone = formData.get('phone') as string;
 
-        if (!full_name) {
+        if (!name) {
             return { error: 'El nombre es obligatorio' };
         }
 
         const hourly_rate = hourly_rate_str ? parseFloat(hourly_rate_str) : null;
 
         const newTeacher = await TeacherRepository.create({
-            full_name,
-            specialty: specialty || null,
+            name,
+            instrument: instrument || null,
             hourly_rate: isNaN(hourly_rate as number) ? null : hourly_rate,
             phone: phone || null,
         });

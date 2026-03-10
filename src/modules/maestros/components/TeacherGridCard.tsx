@@ -11,20 +11,20 @@ export function TeacherGridCard({ teacher }: { teacher: Teacher }) {
                     <div className="flex items-start justify-between mb-4">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-accent/20 to-primary/20 flex items-center justify-center border border-white/10 shadow-inner group-hover:shadow-[0_0_15px_hsl(var(--accent)/0.3)] transition-all">
                             <span className="text-xl font-bold text-accent">
-                                {teacher.full_name.charAt(0).toUpperCase()}
+                                {teacher.name.charAt(0).toUpperCase()}
                             </span>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${teacher.is_active
-                                ? 'bg-accent/10 text-accent border-accent/20 shadow-[0_0_10px_hsl(var(--accent)/0.2)]'
-                                : 'bg-destructive/10 text-destructive border-destructive/20'
+                            ? 'bg-accent/10 text-accent border-accent/20 shadow-[0_0_10px_hsl(var(--accent)/0.2)]'
+                            : 'bg-destructive/10 text-destructive border-destructive/20'
                             }`}>
                             {teacher.is_active ? 'Activo' : 'Inactivo'}
                         </span>
                     </div>
 
-                    <h3 className="text-xl font-black text-foreground uppercase tracking-tighter drop-shadow-sm mb-1">{teacher.full_name}</h3>
+                    <h3 className="text-xl font-black text-foreground uppercase tracking-tighter drop-shadow-sm mb-1">{teacher.name}</h3>
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">
-                        {teacher.specialty || 'Sin Especialidad'}
+                        {teacher.instrument || 'Sin Especialidad'}
                     </p>
                 </div>
 
