@@ -8,7 +8,7 @@ import PaymentClientWrapper from '@/ui/components/modules/payments/PaymentClient
 const getDefaultDateRange = () => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.getMonth();
+    const month = now.getMonth(); // JS months 0-indexed
 
     // 26 del mes anterior (ISO string format for direct comparison)
     const start = new Date(year, month - 1, 26);
@@ -21,7 +21,11 @@ const getDefaultDateRange = () => {
     };
 };
 
-export default async function PaymentsDashboardPage() {
+export default async function PaymentsDashboardPage({
+    searchParams
+}: {
+    searchParams: { start?: string; end?: string }
+}) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -29,24 +33,24 @@ export default async function PaymentsDashboardPage() {
         redirect('/auth');
     }
 
-    const { start, end } = getDefaultDateRange();
+    const defaultRange = getDefaultDateRange();
+    const start = searchParams?.start || defaultRange.start;
+    const end = searchParams?.end || defaultRange.end;
 
-    // Obtener docentes y sus cálculos iniciales
     let teacherPayments: TeacherPaymentInfo[] = [];
 
     try {
         const teachers = await dataService.getTeachers();
 
-        // Mapear pagos para cada docente (esto es pesado para un Server Component si hay muchos,
-        // pero ideal para el MVP si la cantidad de profesores es manejable < 100)
-        // En un escenario real, esto se haría bajo demanda o paginado.
         const paymentData = await Promise.all(
-            teachers.slice(0, 15).map(async (t) => { // Aumentamos un poco el límite para el MVP
+            teachers.map(async (t) => {
                 const classes = await paymentService.getTeacherClasses(t.name, start, end);
-                return paymentService.calculatePayment(t.name, Number(t.hourly_rate) || 0, classes);
+                return paymentService.calculatePayment(t.name, Number(t.hourly_rate) || 0, classes, t.instrument || 'Docente');
             })
         );
-        teacherPayments = paymentData;
+
+        // Filtramos para mostrar solo a los profesores que tuvieron horas este mes
+        teacherPayments = paymentData.filter(p => p.totalHours > 0);
     } catch (err) {
         console.error('Error al cargar pagos en servidor:', err);
     }
