@@ -43,7 +43,8 @@ export function TeacherFormModal({ teacher, trigger }: Props) {
     return (
         <>
             {trigger ? (
-                <div onClick={(e) => { e.stopPropagation(); setIsOpen(true); }} className="cursor-pointer w-full h-full absolute inset-0 z-20">
+                <div onClick={(e) => { e.stopPropagation(); setIsOpen(true); }} className="cursor-pointer h-full w-full relative">
+                    <div className="absolute inset-0 z-20" />
                     {trigger}
                 </div>
             ) : (
