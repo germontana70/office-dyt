@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TeacherPaymentInfo } from '@/infra/services/payments';
 import { reportService } from '@/infra/services/reports';
+import { syncCalendarEventsAction } from '@/app/actions/sync-calendar-events';
 
 interface Props {
     initialPayments: TeacherPaymentInfo[];
@@ -18,6 +19,24 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
 
     const [localStart, setLocalStart] = useState(startDate);
     const [localEnd, setLocalEnd] = useState(endDate);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            const res = await syncCalendarEventsAction(localStart, localEnd, "2026-1");
+            if (res.success) {
+                alert(`✅ ${res.message}`);
+                router.refresh();
+            } else {
+                alert(`❌ Error: ${res.message}`);
+            }
+        } catch (error: any) {
+            alert(`❌ Error inesperado: ${error.message}`);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const handleRateChange = (idx: number, newRate: number) => {
         const updated = [...payments];
@@ -122,6 +141,13 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                         className="ml-2 px-6 py-3 rounded-xl bg-primary/20 text-primary border border-primary/30 font-bold uppercase tracking-widest hover:bg-primary/30 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]"
                     >
                         Filtrar
+                    </button>
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className={`ml-2 px-6 py-3 rounded-xl ${isSyncing ? 'bg-orange-500/20 text-orange-400 border-orange-500/30 cursor-wait' : 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30 cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.2)]'} border font-bold uppercase tracking-widest transition-all`}
+                    >
+                        {isSyncing ? 'Sincronizando...' : '🔄 Sincronizar'}
                     </button>
                 </div>
             </div>

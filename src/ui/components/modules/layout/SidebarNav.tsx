@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -11,6 +12,14 @@ function cn(...inputs: ClassValue[]) {
 
 export function SidebarNav() {
     const pathname = usePathname();
+    const isAuditRoute = pathname.startsWith('/dashboard/audit-finance');
+    const [isAuditOpen, setIsAuditOpen] = useState(isAuditRoute);
+
+    useEffect(() => {
+        if (isAuditRoute) {
+            setIsAuditOpen(true);
+        }
+    }, [isAuditRoute]);
 
     const navItems = [
         {
@@ -100,6 +109,69 @@ export function SidebarNav() {
                     </Link>
                 );
             })}
+            <div className="pt-2">
+                <button
+                    type="button"
+                    onClick={() => setIsAuditOpen((prev) => !prev)}
+                    className={cn(
+                        "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-500 relative overflow-hidden",
+                        isAuditRoute
+                            ? "bg-emerald-500/10 text-emerald-200 border border-emerald-400/30 shadow-[0_0_20px_rgba(52,211,153,0.2)]"
+                            : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground hover:translate-x-1"
+                    )}
+                >
+                    {isAuditRoute && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-300/50 via-emerald-300 to-emerald-300/50 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+                    )}
+                    <div
+                        className={cn(
+                            "transition-colors duration-300",
+                            isAuditRoute ? "text-emerald-200" : "text-muted-foreground"
+                        )}
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l7 4v5c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V7l7-4z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+                        </svg>
+                    </div>
+                    <span className="font-medium tracking-wide">AUDITORIA</span>
+                    <svg
+                        className={cn("ml-auto h-4 w-4 transition-transform duration-300", isAuditOpen ? "rotate-180" : "")}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                {isAuditOpen && (
+                    <div className="mt-2 space-y-1 pl-10">
+                        <Link
+                            href="/dashboard/audit-finance"
+                            className={cn(
+                                "block rounded-lg px-3 py-2 text-sm transition-all duration-300",
+                                pathname === '/dashboard/audit-finance'
+                                    ? "bg-emerald-400/10 text-emerald-200 border border-emerald-400/20"
+                                    : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground"
+                            )}
+                        >
+                            Alineacion de Programas
+                        </Link>
+                        <Link
+                            href="/dashboard/audit-finance/legalize"
+                            className={cn(
+                                "block rounded-lg px-3 py-2 text-sm transition-all duration-300",
+                                pathname.startsWith('/dashboard/audit-finance/legalize')
+                                    ? "bg-emerald-400/10 text-emerald-200 border border-emerald-400/20"
+                                    : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground"
+                            )}
+                        >
+                            Legalizacion Masiva
+                        </Link>
+                    </div>
+                )}
+            </div>
         </nav>
     );
 }

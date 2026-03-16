@@ -1,36 +1,58 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CurrentStudent } from '../models/student.schema';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 
 interface StudentSearchSelectProps {
     students: CurrentStudent[];
+    onSelect?: (student: CurrentStudent) => void;
+    onSearchFocus?: () => void;
 }
 
-export function StudentSearchSelect({ students }: StudentSearchSelectProps) {
+export function StudentSearchSelect({ students, onSelect, onSearchFocus }: StudentSearchSelectProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const [isFocused, setIsFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
     const filtered = students.filter(s =>
-        s.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.document_number.includes(searchTerm)
+        (s.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.document_number || '').includes(searchTerm)
     );
 
+    const handleSelect = (student: CurrentStudent) => {
+        if (onSelect) {
+            onSelect(student);
+            setSearchTerm(`${student.first_name} ${student.last_name}`);
+        } else {
+            router.push(`/dashboard/matriculas/${student.id}/edit`);
+        }
+    };
+
+    const handleFocusReset = () => {
+        setIsFocused(true);
+        setSearchTerm('');
+        onSearchFocus?.();
+        inputRef.current?.focus();
+    };
+
     return (
-        <GlassCard className="p-6 relative transition-all duration-500 hover:shadow-[0_8px_40px_0_hsl(var(--primary)/0.1)] animate-in slide-in-from-bottom-6 fade-in duration-700 delay-150 fill-mode-both border-primary/5">
-            <div className="space-y-4">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block pl-1">
+        <GlassCard className="p-6 relative z-50 transition-all duration-500 hover:shadow-[0_8px_40px_0_hsl(var(--primary)/0.1)] animate-in slide-in-from-bottom-6 fade-in duration-700 delay-150 fill-mode-both border border-white/10 bg-black/60 shadow-xl dark:shadow-none">
+            <div className="space-y-4 relative z-50">
+                <label className="text-[10px] font-black text-slate-600 dark:text-muted-foreground uppercase tracking-[0.2em] block pl-1">
                     Buscar Estudiante
                 </label>
 
-                <div className={`relative rounded-xl border transition-all duration-500 bg-background/50 backdrop-blur-md ${isFocused
+                <div
+                    className={`relative rounded-xl border transition-all duration-500 bg-white/5 backdrop-blur-md cursor-pointer ${isFocused
                     ? 'border-accent ring-2 ring-accent/10 shadow-[0_0_25px_hsl(var(--accent)/0.2)] scale-[1.01]'
-                    : 'border-border hover:border-accent/30'
-                    }`}>
+                    : 'border-white/10 hover:border-accent/30'
+                    }`}
+                    onClick={handleFocusReset}
+                >
                     {/* Icono Lupa */}
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <svg
@@ -45,36 +67,46 @@ export function StudentSearchSelect({ students }: StudentSearchSelectProps) {
 
                     <input
                         type="text"
-                        className="w-full bg-transparent border-none text-foreground pl-12 pr-4 py-4 rounded-xl focus:outline-none focus:ring-0 placeholder:text-muted-foreground/20 font-bold tracking-tight"
+                        ref={inputRef}
+                        className="w-full h-full bg-transparent border-none text-foreground rounded-xl outline-none focus:outline-none focus:ring-0 placeholder:text-gray-500 font-bold tracking-tight pl-12 pr-4 py-4"
                         placeholder="Escriba nombre o documento..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        onFocus={() => setIsFocused(true)}
+                        onFocus={() => {
+                            handleFocusReset();
+                        }}
                         onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                     />
                 </div>
 
                 {/* Dropdown flotante al enfocar (Combobox behavior) */}
                 {isFocused && (
-                    <div className="absolute left-0 right-0 mt-3 p-2 bg-background/95 backdrop-blur-2xl border border-accent/20 rounded-2xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] z-50 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300 custom-scrollbar border-t-accent/40">
+                    <div 
+                        className="absolute w-full left-0 right-0 mt-3 p-2 bg-[#0a0a0a]/90 backdrop-blur-2xl border border-accent/20 rounded-2xl shadow-2xl dark:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] z-[100] max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300 custom-scrollbar border-t-accent/40"
+                    >
                         {filtered.length === 0 ? (
                             <div className="p-6 text-center text-[11px] font-black uppercase tracking-widest text-muted-foreground/50">
                                 No se encontraron coincidencias
                             </div>
                         ) : (
-                            <ul className="space-y-1.5">
+                            <ul className="space-y-1.5 focus-within:outline-none">
                                 {filtered.map((student) => (
                                     <li
                                         key={student.id}
-                                        className="flex justify-between items-center p-3.5 rounded-xl hover:bg-accent/10 cursor-pointer transition-all group border border-transparent hover:border-accent/20"
-                                        onClick={() => router.push(`/dashboard/matriculas/${student.id}`)}
+                                        className="flex justify-between items-center p-3.5 rounded-xl hover:bg-white/5 cursor-pointer transition-all group border border-transparent hover:border-white/10"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault(); // Evita que el input pierda el foco antes de procesar el clic
+                                            handleSelect(student);
+                                            setIsFocused(false);
+                                            setSearchTerm(`${student.first_name} ${student.last_name}`);
+                                        }}
                                     >
                                         <div className="flex flex-col">
-                                            <span className="font-black text-foreground group-hover:text-accent transition-colors uppercase tracking-tight italic">
+                                            <span className="font-black text-white group-hover:text-accent transition-colors uppercase tracking-tight italic">
                                                 {student.first_name} {student.last_name}
                                             </span>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-primary/5 px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-white/5 px-1.5 py-0.5 rounded">
                                                     UOC: {student.document_number}
                                                 </span>
                                                 <span className={`text-[10px] font-black uppercase tracking-tighter ${student.enrollment_status === 'Activo' ? 'text-accent' : 'text-primary'}`}>

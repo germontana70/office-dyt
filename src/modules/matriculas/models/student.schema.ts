@@ -73,6 +73,7 @@ export const CurrentStudentSchema = z.object({
     class_day: emptyToNull,
     class_time: emptyToNull,
     observations: emptyToNull,
+    programs: z.any().optional(),
 
     // Fase 3: Gestión Financiera
     enrollment_fee: z.coerce.number().nullable().catch(null),
@@ -125,8 +126,8 @@ export type TruthTableStudent = z.infer<typeof TruthTableStudentSchema>;
 export const RawFormResponseSchema = z.object({
     id: z.string().uuid().optional(),
     row_hash: z.string().min(1), // Para control de duplicados
-    processed: z.boolean().default(false), // Indica si ya se pasó a la tabla de students
-    raw_data: z.record(z.unknown()), // JSON puro de las 42 columnas
+    processed: z.boolean().default(false), // Indica si ya se pasa a la tabla de students
+    raw_data: z.record(z.string(), z.unknown()), // JSON puro de las 42 columnas
     created_at: safeDateTransform,
 });
 

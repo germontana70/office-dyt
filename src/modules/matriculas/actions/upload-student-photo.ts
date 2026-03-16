@@ -15,8 +15,8 @@ export async function uploadStudentPhoto(studentId: string, formData: FormData) 
         return { error: 'El archivo debe ser una imagen válida' };
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        return { error: 'La imagen excede el límite de 5MB' };
+    if (file.size > 1 * 1024 * 1024) { // 1MB limit
+        return { error: 'La imagen excede el límite de 1MB' };
     }
 
     try {

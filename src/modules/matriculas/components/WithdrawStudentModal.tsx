@@ -40,11 +40,12 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
         <>
             {/* Trigger Card (Mismo estilo que antes) */}
             <GlassCard
+                interactive
                 onClick={() => setIsOpen(true)}
-                className="p-5 flex items-center justify-between group hover:border-destructive/50 cursor-pointer transition-all duration-300"
+                className="p-5 flex items-center justify-between group transition-all duration-300"
             >
                 <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-destructive/10 text-destructive group-hover:bg-destructive/20 group-hover:shadow-[0_0_20px_hsl(var(--destructive)/0.3)] transition-all">
+                    <div className="p-3 rounded-xl bg-destructive/10 text-destructive group-hover:bg-destructive/20 transition-all">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -57,7 +58,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
             {/* Modal Overlay */}
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <GlassCard className="w-full max-w-md p-6 border-destructive/20 bg-black/80 relative shadow-[0_0_50px_hsl(var(--destructive)/0.15)] animate-in zoom-in-95 duration-300">
+                    <GlassCard className="w-full max-w-md p-6 border-white/10 bg-black/80 relative shadow-2xl animate-in zoom-in-95 duration-300">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-destructive to-transparent opacity-50" />
 
                         <div className="flex justify-between items-center mb-6">
@@ -66,7 +67,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
                             </h2>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="text-muted-foreground hover:text-white transition-colors"
+                                className="text-slate-400 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-white transition-colors"
                             >
                                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -83,7 +84,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
                                     required
                                     value={selectedStudentId}
                                     onChange={(e) => setSelectedStudentId(e.target.value)}
-                                    className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-destructive focus:border-destructive/50 transition-all font-bold appearance-none cursor-pointer"
+                                    className="w-full bg-slate-100 dark:bg-background/50 border border-slate-200 dark:border-border/50 rounded-xl px-4 py-3 text-slate-900 dark:text-foreground focus:ring-2 focus:ring-destructive focus:border-destructive/50 transition-all font-bold appearance-none cursor-pointer"
                                     disabled={isSubmitting}
                                 >
                                     <option value="" className="bg-background">Buscar por nombre o documento...</option>
@@ -104,7 +105,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
                                     onChange={(e) => setReason(e.target.value)}
                                     placeholder="Falta de pago, no asistió, problemas médicos..."
                                     rows={3}
-                                    className="w-full bg-background/50 border border-border/50 rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-destructive focus:border-destructive/50 transition-all font-medium resize-none shadow-inner"
+                                    className="w-full bg-slate-100 dark:bg-background/50 border border-slate-200 dark:border-border/50 rounded-xl px-4 py-3 text-slate-900 dark:text-foreground focus:ring-2 focus:ring-destructive focus:border-destructive/50 transition-all font-medium resize-none shadow-inner"
                                     disabled={isSubmitting}
                                 />
                             </div>
@@ -113,7 +114,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
                                 <button
                                     type="button"
                                     onClick={() => setIsOpen(false)}
-                                    className="flex-1 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
+                                    className="flex-1 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl transition-all"
                                     disabled={isSubmitting}
                                 >
                                     Cancelar

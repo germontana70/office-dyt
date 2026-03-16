@@ -1,0 +1,1407 @@
+
+> office-dyt@1.0.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.20:3000
+- Environments: .env.local
+
+✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\Usuario\\OneDrive\\Documents\\Antigravity Proyectos\\office-dyt',
+  testMode: true
+}
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 415ms
+ GET /dashboard/maestros 200 in 1963ms (compile: 353ms, proxy.ts: 744ms, render: 866ms)
+✓ Compiled in 102ms
+ GET /dashboard/matriculas 200 in 879ms (compile: 90ms, proxy.ts: 394ms, render: 395ms)
+ POST /dashboard/matriculas 200 in 820ms (compile: 3ms, proxy.ts: 164ms, render: 653ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1366ms (compile: 3ms, proxy.ts: 148ms, render: 1215ms)
+ POST /dashboard/matriculas 200 in 293ms (compile: 2ms, proxy.ts: 142ms, render: 149ms)
+Error fetching program prices: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column program_prices.total_financed does not exist'
+}
+ POST /dashboard/matriculas 200 in 407ms (compile: 3ms, proxy.ts: 144ms, render: 261ms)
+ POST /dashboard/matriculas 200 in 276ms (compile: 2ms, proxy.ts: 148ms, render: 126ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1083ms (compile: 2ms, proxy.ts: 131ms, render: 949ms)
+ POST /dashboard/matriculas 200 in 284ms (compile: 2ms, proxy.ts: 126ms, render: 156ms)
+Error fetching program prices: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column program_prices.total_financed does not exist'
+}
+ POST /dashboard/matriculas 200 in 457ms (compile: 2ms, proxy.ts: 132ms, render: 322ms)
+ POST /dashboard/matriculas 200 in 284ms (compile: 2ms, proxy.ts: 134ms, render: 148ms)
+✓ Compiled in 96ms
+ GET /dashboard/matriculas 200 in 611ms (compile: 70ms, proxy.ts: 477ms, render: 64ms)
+✓ Compiled in 73ms
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1466ms (compile: 64ms, proxy.ts: 149ms, render: 1253ms)
+ POST /dashboard/matriculas 200 in 291ms (compile: 2ms, proxy.ts: 141ms, render: 147ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): null
+Error fetching program prices: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column program_prices.total_financed does not exist'
+}
+ POST /dashboard/matriculas 200 in 459ms (compile: 3ms, proxy.ts: 151ms, render: 306ms)
+ POST /dashboard/matriculas 200 in 283ms (compile: 3ms, proxy.ts: 148ms, render: 133ms)
+ GET /dashboard/matriculas 200 in 827ms (compile: 3ms, proxy.ts: 332ms, render: 492ms)
+ POST /dashboard/matriculas 200 in 565ms (compile: 3ms, proxy.ts: 226ms, render: 336ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1052ms (compile: 2ms, proxy.ts: 123ms, render: 926ms)
+ POST /dashboard/matriculas 200 in 283ms (compile: 2ms, proxy.ts: 144ms, render: 137ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): null
+Error fetching program prices: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column program_prices.total_financed does not exist'
+}
+ POST /dashboard/matriculas 200 in 492ms (compile: 2ms, proxy.ts: 138ms, render: 352ms)
+ POST /dashboard/matriculas 200 in 262ms (compile: 3ms, proxy.ts: 129ms, render: 131ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1067ms (compile: 2ms, proxy.ts: 158ms, render: 907ms)
+ POST /dashboard/matriculas 200 in 286ms (compile: 2ms, proxy.ts: 128ms, render: 155ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): null
+Error fetching program prices: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column program_prices.total_financed does not exist'
+}
+ POST /dashboard/matriculas 200 in 437ms (compile: 2ms, proxy.ts: 138ms, render: 297ms)
+ POST /dashboard/matriculas 200 in 331ms (compile: 2ms, proxy.ts: 184ms, render: 144ms)
+✓ Compiled in 48ms
+ GET /dashboard/matriculas 200 in 466ms (compile: 70ms, proxy.ts: 327ms, render: 69ms)
+✓ Compiled in 42ms
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+✓ Compiled in 104ms
+ GET /dashboard/matriculas 200 in 771ms (compile: 3ms, proxy.ts: 724ms, render: 44ms)
+ GET /dashboard/matriculas 200 in 162ms (compile: 2ms, proxy.ts: 124ms, render: 36ms)
+ GET /dashboard/matriculas 200 in 166ms (compile: 2ms, proxy.ts: 131ms, render: 32ms)
+ GET /dashboard/matriculas 200 in 229ms (compile: 3ms, proxy.ts: 141ms, render: 85ms)
+ GET /dashboard/matriculas 200 in 1228ms (compile: 75ms, proxy.ts: 478ms, render: 675ms)
+ GET /dashboard/audit-finance 200 in 2.0s (compile: 436ms, proxy.ts: 403ms, render: 1166ms)
+✓ Compiled in 89ms
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+✓ Compiled in 96ms
+ GET /dashboard/matriculas 200 in 1302ms (compile: 105ms, proxy.ts: 830ms, render: 366ms)
+ GET /dashboard/matriculas 200 in 1235ms (compile: 78ms, proxy.ts: 752ms, render: 404ms)
+ GET /dashboard/audit-finance 200 in 923ms (compile: 21ms, proxy.ts: 356ms, render: 547ms)
+ GET /dashboard/audit-finance 200 in 1747ms (compile: 51ms, proxy.ts: 736ms, render: 960ms)
+ GET /dashboard/audit-finance 200 in 1740ms (compile: 158ms, proxy.ts: 754ms, render: 828ms)
+✓ Compiled in 42ms
+ GET /dashboard/audit-finance 200 in 355ms (compile: 54ms, proxy.ts: 167ms, render: 134ms)
+ GET /dashboard/matriculas 200 in 611ms (compile: 3ms, proxy.ts: 314ms, render: 294ms)
+ GET /dashboard/audit-finance 200 in 1147ms (compile: 2ms, proxy.ts: 304ms, render: 841ms)
+ GET /dashboard 200 in 1097ms (compile: 43ms, proxy.ts: 223ms, render: 830ms)
+✓ Compiled in 70ms
+✓ Compiled in 33ms
+ GET /dashboard/matriculas 200 in 238ms (compile: 3ms, proxy.ts: 202ms, render: 33ms)
+ GET /dashboard 200 in 443ms (compile: 3ms, proxy.ts: 406ms, render: 34ms)
+✓ Compiled in 56ms
+ GET /dashboard 200 in 221ms (compile: 2ms, proxy.ts: 154ms, render: 65ms)
+ GET /dashboard/matriculas 200 in 223ms (compile: 2ms, proxy.ts: 191ms, render: 29ms)
+✓ Compiled in 71ms
+✓ Compiled in 178ms
+ GET /dashboard 200 in 414ms (compile: 3ms, proxy.ts: 323ms, render: 89ms)
+ GET /dashboard/matriculas 200 in 414ms (compile: 3ms, proxy.ts: 359ms, render: 52ms)
+✓ Compiled in 69ms
+✓ Compiled in 54ms
+✓ Compiled in 69ms
+ GET /dashboard/audit-finance 200 in 1203ms (compile: 101ms, proxy.ts: 270ms, render: 832ms)
+ GET /dashboard/audit-finance/legalize 200 in 985ms (compile: 246ms, proxy.ts: 154ms, render: 586ms)
+✓ Compiled in 51ms
+✓ Compiled in 75ms
+✓ Compiled in 292ms
+ GET /dashboard/audit-finance/legalize 200 in 389ms (compile: 64ms, proxy.ts: 156ms, render: 168ms)
+ GET /dashboard/matriculas 200 in 390ms (compile: 70ms, proxy.ts: 268ms, render: 52ms)
+✓ Compiled in 45ms
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/audit-finance/legalize 200 in 1747ms (compile: 50ms, proxy.ts: 295ms, render: 1402ms)
+✓ Compiled in 83ms
+ GET /dashboard/matriculas 200 in 490ms (compile: 3ms, proxy.ts: 354ms, render: 132ms)
+ GET /dashboard/audit-finance/legalize 200 in 481ms (compile: 52ms, proxy.ts: 383ms, render: 46ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 38ms
+⨯ TypeError: Cannot read properties of undefined (reading '42a90fbb-587c-4d85-8605-edbfa5b65f03:new')
+    at <unknown> (src\modules\audit-finance\components\LegalizeConsole.tsx:84:61)
+    at Array.map (<anonymous>)
+    at LegalizeConsole (src\modules\audit-finance\components\LegalizeConsole.tsx:81:31)
+  82 |                             const rowBg = index % 2 === 0 ? 'bg-white/[0.03]' : 'bg-transparent';
+  83 |                             const rowKey = `${row.enrollmentId}:${row.programId || 'new'}`;
+> 84 |                             const selectedValue = selections[rowKey] || '';
+     |                                                             ^
+  85 |                             const isPending = pendingRowKeys.has(rowKey);
+  86 |                             const isRemoving = removingRowKeys.has(rowKey);
+  87 | {
+  digest: '2172649403'
+}
+ GET /dashboard/audit-finance/legalize 200 in 901ms (compile: 45ms, proxy.ts: 187ms, render: 670ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 80ms
+ GET /dashboard/matriculas 200 in 364ms (compile: 2ms, proxy.ts: 328ms, render: 34ms)
+⨯ Error: Module [project]/node_modules/next/dist/esm/lib/framework/boundary-components.js [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/dashboard/matriculas/page { GLOBAL_ERROR_MODULE => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_0 => "[project]/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_1 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/src/app/dashboard/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/src/app/dashboard/matriculas/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+    at ignore-listed frames {
+  digest: '3541144388'
+}
+ GET /dashboard/audit-finance/legalize 200 in 1301ms (compile: 49ms, proxy.ts: 210ms, render: 1042ms)
+✓ Compiled in 50ms
+ GET /dashboard/audit-finance/legalize 200 in 274ms (compile: 48ms, proxy.ts: 139ms, render: 87ms)
+ GET /dashboard/matriculas 200 in 282ms (compile: 2ms, proxy.ts: 243ms, render: 37ms)
+ GET /dashboard/audit-finance/legalize 200 in 170ms (compile: 2ms, proxy.ts: 135ms, render: 32ms)
+ GET /dashboard/matriculas 200 in 195ms (compile: 3ms, proxy.ts: 152ms, render: 41ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/audit-finance/legalize 200 in 1455ms (compile: 3ms, proxy.ts: 232ms, render: 1221ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/audit-finance/legalize 200 in 1172ms (compile: 3ms, proxy.ts: 123ms, render: 1046ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/audit-finance/legalize 200 in 1181ms (compile: 3ms, proxy.ts: 119ms, render: 1059ms)
+✓ Compiled in 53ms
+ GET /dashboard/matriculas 200 in 967ms (compile: 85ms, proxy.ts: 459ms, render: 423ms)
+ GET /dashboard/audit-finance/legalize 200 in 1042ms (compile: 48ms, proxy.ts: 363ms, render: 632ms)
+ GET /dashboard/matriculas 200 in 655ms (compile: 2ms, proxy.ts: 272ms, render: 380ms)
+ GET /dashboard/audit-finance/legalize 200 in 786ms (compile: 4ms, proxy.ts: 453ms, render: 329ms)
+ GET /dashboard/matriculas 200 in 537ms (compile: 5ms, proxy.ts: 251ms, render: 281ms)
+ GET /dashboard/audit-finance/legalize 200 in 568ms (compile: 7ms, proxy.ts: 263ms, render: 298ms)
+✓ Compiled in 53ms
+ GET /dashboard/audit-finance/legalize 200 in 272ms (compile: 50ms, proxy.ts: 172ms, render: 50ms)
+ GET /dashboard/matriculas 200 in 463ms (compile: 4ms, proxy.ts: 142ms, render: 317ms)
+ GET /dashboard/audit-finance/legalize 200 in 199ms (compile: 5ms, proxy.ts: 142ms, render: 53ms)
+ GET /dashboard/matriculas 200 in 384ms (compile: 3ms, proxy.ts: 125ms, render: 256ms)
+✓ Compiled in 48ms
+ GET /dashboard/audit-finance/legalize 200 in 945ms (compile: 48ms, proxy.ts: 307ms, render: 590ms)
+ GET /dashboard/matriculas 200 in 453ms (compile: 2ms, proxy.ts: 157ms, render: 294ms)
+ POST /dashboard/matriculas 200 in 610ms (compile: 2ms, proxy.ts: 249ms, render: 359ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+[FINANCE INIT] Error fallback creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'plan_type' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1024ms (compile: 2ms, proxy.ts: 125ms, render: 897ms)
+ POST /dashboard/matriculas 200 in 261ms (compile: 2ms, proxy.ts: 125ms, render: 134ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): [
+  {
+    program_name: 'Aprestamiento',
+    cash_price: 930000,
+    increment_percentage: 7,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Semipersonalizado',
+    cash_price: 1650000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Danza y Expresión (8 Clases)',
+    cash_price: 540000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano iniciación',
+    cash_price: 1490000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Ukelele',
+    cash_price: 1550000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Personalizado',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  }
+]
+ POST /dashboard/matriculas 200 in 384ms (compile: 1987µs, proxy.ts: 116ms, render: 266ms)
+ POST /dashboard/matriculas 200 in 264ms (compile: 2ms, proxy.ts: 136ms, render: 125ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+[FINANCE INIT] Error fallback creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'plan_type' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 965ms (compile: 2ms, proxy.ts: 114ms, render: 848ms)
+ POST /dashboard/matriculas 200 in 264ms (compile: 1922µs, proxy.ts: 128ms, render: 134ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): [
+  {
+    program_name: 'Aprestamiento',
+    cash_price: 930000,
+    increment_percentage: 7,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Semipersonalizado',
+    cash_price: 1650000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Danza y Expresión (8 Clases)',
+    cash_price: 540000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano iniciación',
+    cash_price: 1490000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Ukelele',
+    cash_price: 1550000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Personalizado',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  }
+]
+ POST /dashboard/matriculas 200 in 398ms (compile: 1949µs, proxy.ts: 152ms, render: 244ms)
+ POST /dashboard/matriculas 200 in 250ms (compile: 2ms, proxy.ts: 124ms, render: 124ms)
+ POST /dashboard/matriculas 200 in 510ms (compile: 3ms, proxy.ts: 173ms, render: 334ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+[FINANCE INIT] Error fallback creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'plan_type' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1343ms (compile: 2ms, proxy.ts: 202ms, render: 1139ms)
+ POST /dashboard/matriculas 200 in 326ms (compile: 3ms, proxy.ts: 175ms, render: 149ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): [
+  {
+    program_name: 'Aprestamiento',
+    cash_price: 930000,
+    increment_percentage: 7,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Semipersonalizado',
+    cash_price: 1650000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Danza y Expresión (8 Clases)',
+    cash_price: 540000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano iniciación',
+    cash_price: 1490000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Ukelele',
+    cash_price: 1550000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Personalizado',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  }
+]
+ POST /dashboard/matriculas 200 in 463ms (compile: 3ms, proxy.ts: 152ms, render: 309ms)
+ POST /dashboard/matriculas 200 in 282ms (compile: 2ms, proxy.ts: 145ms, render: 135ms)
+[FINANCE INIT] Error creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'base_amount' column of 'dyt_payment_plans' in the schema cache"
+}
+[FINANCE INIT] Error fallback creando plan: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'plan_type' column of 'dyt_payment_plans' in the schema cache"
+}
+ POST /dashboard/matriculas 200 in 1060ms (compile: 2ms, proxy.ts: 152ms, render: 905ms)
+ POST /dashboard/matriculas 200 in 289ms (compile: 2ms, proxy.ts: 152ms, render: 134ms)
+[FINANCE] Semestre enviado a la query: 2026-1
+[FINANCE] Programas recibidos (dyt_program_prices): null
+Error fetching dyt program prices: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.program_prices'",
+  message: "Could not find the table 'public.dyt_program_prices' in the schema cache"
+}
+[FINANCE] Programas recibidos (program_prices): [
+  {
+    program_name: 'Aprestamiento',
+    cash_price: 930000,
+    increment_percentage: 7,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (16 Clases)',
+    cash_price: 1600000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Semipersonalizado',
+    cash_price: 1650000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Artes (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Instrumento (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teatro (12 Clases)',
+    cash_price: 1240000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Curso Libre - Teoría (8 Clases)',
+    cash_price: 860000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Danza y Expresión (8 Clases)',
+    cash_price: 540000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Entonación',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano iniciación',
+    cash_price: 1490000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Piano Ukelele',
+    cash_price: 1550000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  },
+  {
+    program_name: 'Semestre Personalizado',
+    cash_price: 1880000,
+    increment_percentage: 5.4,
+    installments: {
+      '2': [Object],
+      '3': [Object],
+      '4': [Object],
+      '5': [Object],
+      '6': [Object]
+    },
+    semester: '2026-1'
+  }
+]
+ POST /dashboard/matriculas 200 in 422ms (compile: 2ms, proxy.ts: 132ms, render: 288ms)
+ POST /dashboard/matriculas 200 in 296ms (compile: 2ms, proxy.ts: 136ms, render: 158ms)
+ GET /dashboard/configuracion 200 in 1074ms (compile: 27ms, proxy.ts: 373ms, render: 674ms)
+ GET /dashboard/configuracion/precios 200 in 389ms (compile: 71ms, proxy.ts: 138ms, render: 180ms)
+✓ Compiled in 87ms
+ GET /dashboard/configuracion/precios 200 in 428ms (compile: 3ms, proxy.ts: 390ms, render: 34ms)
+ GET /dashboard/matriculas 200 in 432ms (compile: 80ms, proxy.ts: 256ms, render: 96ms)
+^C^C

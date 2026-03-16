@@ -6,6 +6,8 @@ import { SyncButton } from "./components/SyncButton";
 import { CurrentStudentRepository } from '@/modules/matriculas/repository/current-student-repo';
 import { TeacherRepository } from '@/modules/maestros/repository/teacher-repo';
 import { getActiveSemesterName } from '@/modules/configuracion/actions/set-active-semester';
+import { SyncEngineButton } from '@/components/dashboard/SyncEngineButton';
+import { MigrationCard } from '@/components/dashboard/MigrationCard';
 
 export default async function DashboardPage() {
     const activeSemester = await getActiveSemesterName();
@@ -80,28 +82,16 @@ export default async function DashboardPage() {
                     </GlassCard>
                 </Link>
 
-                <GlassCard interactive className="group relative overflow-hidden md:col-span-2 lg:col-span-1">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-accent/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-4 text-accent">
-                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter text-foreground">Estado del Motor</h3>
-                        </div>
-                        <div className="mt-6">
-                            <span className="text-2xl font-black tracking-tighter text-foreground block uppercase italic">Sincronización Pasiva</span>
-                            <p className="text-accent mt-3 font-black uppercase tracking-[0.2em] text-[10px]">
-                                Listo para Webhooks de GCP
-                            </p>
+                <SyncEngineButton />
 
-                            <div className="mt-4 h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-accent w-full neon-pulse" />
-                            </div>
-                        </div>
-                    </div>
-                </GlassCard>
+            </div>
 
+            {/* Zona Administrativa / Migración */}
+            <div className="pt-8 border-t border-white/5">
+                <h2 className="text-[10px] font-black uppercase text-white/20 tracking-[0.3em] mb-6">Herramientas de Infraestructura</h2>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <MigrationCard />
+                </div>
             </div>
 
         </div>
