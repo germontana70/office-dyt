@@ -5,6 +5,7 @@ import { StudentSearchSelect } from './StudentSearchSelect';
 import { EnrollmentAuditCard } from './EnrollmentAuditCard';
 import { getEnrollmentAudit } from '@/app/actions/migration';
 import { CurrentStudent } from '../models/student.schema';
+import { SequentialNavigator } from './SequentialNavigator';
 
 interface MatriculasClientViewProps {
     students: CurrentStudent[];
@@ -14,8 +15,10 @@ interface MatriculasClientViewProps {
 export function MatriculasClientView({ students, semester }: MatriculasClientViewProps) {
     const [auditData, setAuditData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<CurrentStudent | null>(null);
 
     const handleStudentSelect = async (student: CurrentStudent) => {
+        setSelectedStudent(student);
         setLoading(true);
         try {
             const data = await getEnrollmentAudit(student.id || '', semester);
@@ -27,12 +30,31 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
         }
     };
 
+    const currentIndex = selectedStudent ? students.findIndex(s => s.id === selectedStudent.id) : -1;
+
+    const handlePrev = () => {
+        if (currentIndex > 0) {
+            const prev = students[currentIndex - 1];
+            handleStudentSelect(prev);
+        }
+    };
+
+    const handleNext = () => {
+        if (currentIndex >= 0 && currentIndex < students.length - 1) {
+            const next = students[currentIndex + 1];
+            handleStudentSelect(next);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <StudentSearchSelect 
                 students={students} 
                 onSelect={handleStudentSelect} 
-                onSearchFocus={() => setAuditData(null)}
+                onSearchFocus={() => {
+                    setAuditData(null);
+                    setSelectedStudent(null);
+                }}
             />
 
             {loading && (
@@ -42,8 +64,18 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
                 </div>
             )}
 
-            {!loading && auditData && (
-                <EnrollmentAuditCard enrollment={auditData} />
+            {!loading && auditData && selectedStudent && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex justify-end">
+                        <SequentialNavigator 
+                            currentIndex={currentIndex}
+                            total={students.length}
+                            onPrev={handlePrev}
+                            onNext={handleNext}
+                        />
+                    </div>
+                    <EnrollmentAuditCard enrollment={auditData} />
+                </div>
             )}
 
             {!loading && !auditData && searchTermActive() && (

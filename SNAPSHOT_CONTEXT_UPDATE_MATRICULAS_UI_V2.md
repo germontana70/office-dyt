@@ -34,5 +34,10 @@ Se ha ejecutado una intervención de emergencia para corregir fallos de contrast
 ## Seguridad y Control de Versiones
 - **Protección de Datos**: Se ha reforzado el `.gitignore` para excluir la carpeta `google-credentials/` y archivos `.env`, evitando bloqueos de seguridad en GitHub (GH013).
 
+## Navegación Secuencial de Auditoría
+- **Acelerador de Tareas**: Para evitar interacciones redundantes de búsqueda, se insertó el componente `<SequentialNavigator />`.
+- **Estructura Estética**: Es una píldora horizontal (`SequentialNavigator.tsx`) posicionada adyacente a la tarjeta central que opera bajo pautas formales de la UI (`bg-black/60` con iconos `lucide-react`).
+- **Lógica de Estado**: El ciclo secuencial calcula límites iterando sobre el `findIndex` del estudiante cargado y muta silenciadamente disparando fetch subsecuentes al backend, facilitando revisiones tipo lote para las secretarias.
+
 ## Estado Final
 La interfaz de Matrículas ahora es 100% coherente con el Dashboard principal: oscura, translúcida y con contrastes de alta legibilidad en todas sus profundidades (Lista y Detalle).
