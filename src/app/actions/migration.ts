@@ -31,12 +31,19 @@ export async function migrateSiaToDyt() {
             throw new Error(`Fallo al cargar docentes: ${teachersError.message}`);
         }
 
-        const instrumentMap = new Map((instruments || []).map(item => [item.name.toLowerCase().trim(), item.id]));
-        const teacherMap = new Map((teachers || []).map(item => [item.name.toLowerCase().trim(), item.id]));
+        const normalizeStr = (str: string) => 
+            String(str || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .trim()
+                .toLowerCase();
+
+        const instrumentMap = new Map((instruments || []).map(item => [normalizeStr(item.name), item.id]));
+        const teacherMap = new Map((teachers || []).map(item => [normalizeStr(item.name), item.id]));
 
         const { data: legacyStudents, error: legacyError } = await supabase
             .from('students')
-            .select('id, programs, semester')
+            .select('id, first_name, last_name, programs, semester')
             .eq('semester', semester);
 
         if (legacyError) {
@@ -47,54 +54,108 @@ export async function migrateSiaToDyt() {
         let programsInjectedCount = 0;
 
         for (const student of legacyStudents || []) {
-            const { data: enrollment, error: enrollError } = await supabase
+            console.log(`[MIGRATION IN-PROGRESS] Procesando estudiante ID: ${student.id} (${student.first_name} ${student.last_name})`);
+            
+            // UPSERT Manual: Buscar si la cabecera ya existe
+            let enrollmentId = null;
+            const { data: existingEnrollment } = await supabase
                 .from('dyt_enrollments')
-                .insert({
-                    student_id: student.id,
-                    semester,
-                    total_calculated: 0,
-                    enrollment_fee_enabled: false
-                })
                 .select('id')
-                .single();
+                .eq('student_id', student.id)
+                .eq('semester', semester)
+                .maybeSingle();
 
-            if (enrollError) {
-                throw new Error(`Fallo al insertar matrícula para estudiante ${student.id}: ${enrollError.message}`);
+            if (existingEnrollment) {
+                // Actualizar status a 'Migrada' y purgar el total calculado
+                const { error: updateError } = await supabase
+                    .from('dyt_enrollments')
+                    .update({ 
+                        status: 'Migrada',
+                        total_calculated: 0,
+                    })
+                    .eq('id', existingEnrollment.id);
+                
+                if (updateError) {
+                    throw new Error(`Fallo al actualizar matrícula previa para estudiante ${student.id}: ${updateError.message}`);
+                }
+                enrollmentId = existingEnrollment.id;
+            } else {
+                // Crear fila si no hay head anterior
+                const { data: newEnrollment, error: enrollError } = await supabase
+                    .from('dyt_enrollments')
+                    .insert({
+                        student_id: student.id,
+                        semester,
+                        status: 'Migrada',
+                        total_calculated: 0,
+                        enrollment_fee_enabled: false
+                    })
+                    .select('id')
+                    .single();
+
+                if (enrollError || !newEnrollment) {
+                    throw new Error(`Fallo al insertar matrícula base para estudiante ${student.id}: ${enrollError?.message}`);
+                }
+                enrollmentId = newEnrollment.id;
             }
 
             enrolledCount++;
 
+            // Mapeo Desanidado del JSONB "programs"
             const programsArray: LegacyProgram[] = Array.isArray(student.programs) ? student.programs : [];
 
             for (const program of programsArray) {
-                const rawInstrument = (program.instrument || '').trim().toLowerCase();
-                const rawTeacher = (program.teacher_assigned || '').trim().toLowerCase();
+                const rawInstrument = normalizeStr(program.instrument || '');
+                const rawTeacher = normalizeStr(program.teacher_assigned || '');
 
                 const instrumentId = instrumentMap.get(rawInstrument) || null;
                 const teacherId = teacherMap.get(rawTeacher) || null;
 
                 const firstSchedule = program.schedules && program.schedules[0] ? program.schedules[0] : {};
 
-                const { error: programError } = await supabase
-                    .from('dyt_enrollment_programs')
-                    .insert({
-                        enrollment_id: enrollment.id,
-                        program_name: program.name || 'Programa Migrado',
-                        instrument_id: instrumentId,
-                        teacher_id: teacherId,
-                        day_1: firstSchedule.day || null,
-                        time_1: firstSchedule.time || null,
-                        agreed_price: 0,
-                        number_of_classes: 0
-                    });
+                // Buscar un cruce previo de programa en esta matrícula para Upsert manual
+                const { data: existingProgramRecord } = await supabase
+                     .from('dyt_enrollment_programs')
+                     .select('id')
+                     .eq('enrollment_id', enrollmentId)
+                     .eq('program_name', program.name || 'Programa Migrado')
+                     .maybeSingle();
 
-                if (programError) {
-                    throw new Error(
-                        `Fallo al insertar programa (${program.name || 'Programa Migrado'}): ${programError.message}`
-                    );
+                if (existingProgramRecord) {
+                    // Update silente
+                    const { error: pUpdateErr } = await supabase
+                        .from('dyt_enrollment_programs')
+                        .update({
+                            instrument_id: instrumentId,
+                            teacher_id: teacherId,
+                            day_1: firstSchedule.day || null,
+                            time_1: firstSchedule.time || null,
+                            agreed_price: 0
+                        })
+                        .eq('id', existingProgramRecord.id);
+                        if (pUpdateErr) console.log(`[MIGRATION WARN] update fallido en detail: ${pUpdateErr.message}`);
+                } else {
+                    // Insert
+                    const { error: programError } = await supabase
+                        .from('dyt_enrollment_programs')
+                        .insert({
+                            enrollment_id: enrollmentId,
+                            program_name: program.name || 'Programa Migrado',
+                            instrument_id: instrumentId,
+                            teacher_id: teacherId,
+                            day_1: firstSchedule.day || null,
+                            time_1: firstSchedule.time || null,
+                            agreed_price: 0,
+                            number_of_classes: 0
+                        });
+
+                    if (programError) {
+                        console.log(`[MIGRATION WARN] Ignorando fallo de insert en programa de ${student.id}: ${programError.message}`);
+                        // NO Throw; permitimos seguir procesando
+                    } else {
+                        programsInjectedCount++;
+                    }
                 }
-
-                programsInjectedCount++;
             }
         }
 
@@ -103,11 +164,11 @@ export async function migrateSiaToDyt() {
 
         return {
             success: true,
-            message: `¡Éxito! ${enrolledCount} estudiantes y ${programsInjectedCount} programas migrados a la Bóveda DYT.`
+            message: `¡Éxito! ${enrolledCount} estudiantes procesados y ${programsInjectedCount} sub-programas inyectados relacionalmente.`
         };
     } catch (error: any) {
-        console.error('[MIGRATION ERROR]', error);
-        return { success: false, error: `Fallo en migración: ${error.message}` };
+        console.error('[MIGRATION ERROR CRITICAL]', error);
+        return { success: false, error: `Fallo en operación batch de migración: ${error.message}` };
     }
 }
 
