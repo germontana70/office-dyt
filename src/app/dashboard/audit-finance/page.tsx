@@ -34,24 +34,10 @@ export default async function AuditFinancePage() {
 
     const currentSemester = activeSetting?.semester || '2026-1';
 
-    // 2. Traer Todas las Matrículas Activas/Migradas del Semestre
-    const { data: enrollments, error: enrollmentsError } = await supabase
+    // 2. Traer Todas las Matrículas Activas/Migradas del Semestre (Consulta Plana)
+    const { data: enrollmentsData, error: enrollmentsError } = await supabase
         .from('dyt_enrollments')
-        .select(`
-            id, 
-            student_id, 
-            students!inner(
-                id,
-                first_name,
-                last_name,
-                document_number
-            ),
-            dyt_enrollment_programs(
-                id,
-                program_name,
-                agreed_price
-            )
-        `)
+        .select('*')
         .eq('semester', currentSemester);
 
     if (enrollmentsError) {
@@ -59,7 +45,46 @@ export default async function AuditFinancePage() {
         return <div className="p-8 text-white">Error de lectura de matrículas: {enrollmentsError.message}</div>;
     }
 
-    // 3. Traer la Bóveda de Precios Actual del Semestre 
+    // 3. Extraer IDs para consultas relacionales aisladas
+    const studentIds = Array.from(new Set(enrollmentsData?.map(e => e.student_id).filter(Boolean)));
+    const enrollmentIds = enrollmentsData?.map(e => e.id) || [];
+
+    // 4. Fetch de Estudiantes (Aislado) y Programas (Aislado)
+    const [
+        { data: studentsData, error: studentsError },
+        { data: programsData, error: programsError }
+    ] = await Promise.all([
+        supabase
+            .from('students')
+            .select('id, first_name, last_name, document_number')
+            .in('id', studentIds),
+        supabase
+            .from('dyt_enrollment_programs')
+            .select('id, enrollment_id, program_name, agreed_price')
+            .in('enrollment_id', enrollmentIds)
+    ]);
+
+    if (studentsError) console.error('Error fetching students:', studentsError);
+    if (programsError) console.error('Error fetching enrollment programs:', programsError);
+
+    // 5. Memory Mapping: Ensamblar relaciones en JS
+    const studentMap = new Map((studentsData || []).map(s => [s.id, s]));
+    const programsByEnrollment = new Map();
+    
+    (programsData || []).forEach(p => {
+        if (!programsByEnrollment.has(p.enrollment_id)) {
+            programsByEnrollment.set(p.enrollment_id, []);
+        }
+        programsByEnrollment.get(p.enrollment_id).push(p);
+    });
+
+    const enrollments = enrollmentsData?.map(e => ({
+        ...e,
+        students: studentMap.get(e.student_id) || { first_name: 'Estudiante', last_name: 'No Encontrado', document_number: 'N/A' },
+        dyt_enrollment_programs: programsByEnrollment.get(e.id) || []
+    })) || [];
+
+    // 6. Traer la Bóveda de Precios Actual del Semestre 
     const { data: programPricesArray, error: pricesError } = await supabase
         .from('program_prices')
         .select('*');

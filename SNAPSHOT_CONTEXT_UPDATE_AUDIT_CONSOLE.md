@@ -6,7 +6,7 @@
 Para dotar a la directiva de una capacidad reactiva post-sincronización y garantizar que todos los programas estudiantiles están financieramente amparados, se desplegó una **Consola de Auditoría** tabular dedicada construida íntegramente sobre Node `Server Components`.
 
 ## Capacidades Técnicas
-- **Data Fetch Paralelo**: Carga sincronizada del catálogo total de matrículas del semestre actual contra la Bóveda Maestra de Precios.
+- **Data Fetch Paralelo y Memory Mapping (Anti-Cache Crash)**: Se eliminó el acoplamiento duro de llaves foráneas en los requests `.select('*, students(*)')` que colapsaba el caché de esquemas en Supabase. En su lugar, el backend extrae entidades Planas (Matrículas, Estudiantes, Programas) de forma aislada e inyecta las relaciones al vuelo vía Mapas de JavaScript (`studentMap`, `programsByEnrollment`), logrando robustez extrema y nula dependencia de joins inferidos.
 - **Match Engine**: Usa una función polimórfica estricta (`NFD Normalization`) que sanitiza las strings de títulos programáticos legados para cruzar contra los perfiles oficiales pre-registrados de costos. 
 - **Matemáticas Activas**: Emula la misma lógica financiera de la tarjeta individual (redondeos base 10k y porcentajes de interés incrementales) pero en lote tabular.
 
