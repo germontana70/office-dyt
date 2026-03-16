@@ -43,6 +43,7 @@ Se ha ejecutado una intervención de emergencia para corregir fallos de contrast
 - **Extracción Métrica Pura**: Se procesaron los hooks de iteración interna en la vista Detail para capturar rigurosamente las propiedades de la Bóveda de Precios: `<Matrícula de Contado>` vs `<Total Financiado (Proyectado)>`.
 - **Adaptabilidad Lumínica**: El componente es completamente responsivo en Light/Dark modes, aplicando fondos base como `bg-black/5 dark:bg-white/5` sobre una capa primordial `.glass-panel`.
 - **Refuerzo UI**: Los montos resplandecen en `text-3xl` bajo tipografías jerarquizadas (`text-slate-900 dark:text-white` para neutrales, y `text-emerald-600 dark:text-emerald-400` para acentos).
+- **Fix de Bug (Cálculo de Total Financiado)**: Se reparó la lógica de acumulación al iterar los programas, inyectando una función en el frontend de normalización NFD estricta (`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()`) para garantizar el *lookup* contra las llaves de la Bóveda, forzando un Fallback de cálculo financiero que redondea a la decena de mil si el incremento es detectado localmente.
 
 ## Estado Final
 La interfaz de Matrículas ahora es 100% coherente con el Dashboard principal: oscura, translúcida y con contrastes de alta legibilidad en todas sus profundidades (Lista y Detalle).

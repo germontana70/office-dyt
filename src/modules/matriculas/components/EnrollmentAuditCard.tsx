@@ -621,12 +621,37 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     const calculatedTotalFinanced = (() => {
         if (!enrollment?.programs) return 0;
+
+        const normalizeStr = (str: string) => 
+            String(str || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .trim()
+                .toLowerCase();
+
         return enrollment.programs.reduce((sum: number, program: any) => {
-            const selectedKey = programSelection[program.id];
-            const key = selectedKey || normalizeProgramKey(program.program_name || '');
+            const rawName = programSelection[program.id] || program.program_name || '';
+            const key = normalizeStr(rawName);
             const pricing = programPrices[key];
-            const financed = pricing?.financed || 0;
-            return sum + financed;
+            
+            if (!pricing) return sum;
+
+            const cashPrice = pricing.cash || 0;
+            const incrementPercentage = pricing.increment || 0;
+
+            let financedAmount = pricing.financed || 0;
+
+            if (financedAmount <= 0) {
+                if (incrementPercentage > 0) {
+                    const calculated = cashPrice * (1 + (incrementPercentage / 100));
+                    const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
+                    financedAmount = roundup10k(calculated);
+                } else {
+                    financedAmount = cashPrice; 
+                }
+            }
+
+            return sum + financedAmount;
         }, 0);
     })();
 
