@@ -39,5 +39,10 @@ Se ha ejecutado una intervención de emergencia para corregir fallos de contrast
 - **Estructura Estética**: Es una píldora horizontal (`SequentialNavigator.tsx`) posicionada adyacente a la tarjeta central que opera bajo pautas formales de la UI (`bg-black/60` con iconos `lucide-react`).
 - **Lógica de Estado**: El ciclo secuencial calcula límites iterando sobre el `findIndex` del estudiante cargado y muta silenciadamente disparando fetch subsecuentes al backend, facilitando revisiones tipo lote para las secretarias.
 
+## Tarjeta de Auditoría Dual-Mode (Pricing Audit)
+- **Extracción Métrica Pura**: Se procesaron los hooks de iteración interna en la vista Detail para capturar rigurosamente las propiedades de la Bóveda de Precios: `<Matrícula de Contado>` vs `<Total Financiado (Proyectado)>`.
+- **Adaptabilidad Lumínica**: El componente es completamente responsivo en Light/Dark modes, aplicando fondos base como `bg-black/5 dark:bg-white/5` sobre una capa primordial `.glass-panel`.
+- **Refuerzo UI**: Los montos resplandecen en `text-3xl` bajo tipografías jerarquizadas (`text-slate-900 dark:text-white` para neutrales, y `text-emerald-600 dark:text-emerald-400` para acentos).
+
 ## Estado Final
 La interfaz de Matrículas ahora es 100% coherente con el Dashboard principal: oscura, translúcida y con contrastes de alta legibilidad en todas sus profundidades (Lista y Detalle).

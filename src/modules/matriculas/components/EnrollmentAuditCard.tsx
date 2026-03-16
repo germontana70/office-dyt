@@ -619,6 +619,17 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         }, 0);
     })();
 
+    const calculatedTotalFinanced = (() => {
+        if (!enrollment?.programs) return 0;
+        return enrollment.programs.reduce((sum: number, program: any) => {
+            const selectedKey = programSelection[program.id];
+            const key = selectedKey || normalizeProgramKey(program.program_name || '');
+            const pricing = programPrices[key];
+            const financed = pricing?.financed || 0;
+            return sum + financed;
+        }, 0);
+    })();
+
     const scholarshipAmount = (() => {
         // Calcular cuánto se descontó en total comparado con el full cash
         const fullCash = enrollment.programs.reduce((sum: number, p: any) => {
@@ -1157,6 +1168,33 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     </div>
                                 </div>
                             </div>
+
+                        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden border border-white/5 shadow-xl">
+                            <h4 className="text-[10px] font-black uppercase text-slate-500 dark:text-white/30 tracking-widest flex items-center gap-2">
+                                <svg className="w-4 h-4 text-emerald-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                Auditoría de Precios
+                            </h4>
+                            <div className="flex flex-col h-full justify-center divide-y divide-black/10 dark:divide-white/10">
+                                <div className="pb-4 space-y-1">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-gray-400">
+                                        Matrícula de Contado
+                                    </p>
+                                    <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">
+                                        {formatCurrency(baseCashAmount || 0)}
+                                    </p>
+                                </div>
+                                <div className="pt-4 space-y-1">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-gray-400">
+                                        Total Financiado (Proyectado)
+                                    </p>
+                                    <p className="text-3xl font-black tracking-tighter text-emerald-600 dark:text-emerald-400">
+                                        {formatCurrency(calculatedTotalFinanced || 0)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="p-4 bg-black/40 backdrop-blur-md border border-white/5 rounded-2xl space-y-4 lg:col-span-2">
                             <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">
