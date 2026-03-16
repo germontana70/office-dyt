@@ -23,3 +23,10 @@ Al cruzar los precios exitosamente, el plan se inicializa tomando en cuenta el p
 - **Explicación**: Todo financiamiento se redondea "siempre hacia arriba a la decena de mil más cercana".
 
 La aplicación estricta de esta normalización previene la generación de perfiles financieros fantasmas (Sueldo base en $0 por cruces fallidos de tildes como `SEMESTRE PERSONALIZADO` vs `Semestre Personalizado`).
+
+## 4. Resolución de Bugs (Fallback Supabase)
+Durante la implementación del motor Dual-Source, la aplicación fallaba lanzando consolas muertas "Error consultando precios de programa". Esto sucedía porque se forzaba un `select('...', 'cash_price', 'total_financed')` explícito en tablas que transitaban esquemas.
+Para mitigarlo y brindar total resiliencia:
+- Se reemplazó por el comodín universal `.select('*')` tanto para `dyt_program_prices` como `program_prices`.
+- El mapeo del precio `cash_price` / `valor_contado` ahora se detecta fluidamente desde el payload sin colisionar en RLS o Type Definitions de la columna del Postgres.
+- Se implementó un logging transparente con el raw error desde Supabase: `console.error('[FINANCE INIT] Supabase Error Real', error);` en cada fallback de la cadena para habilitar el trazado ágil.
