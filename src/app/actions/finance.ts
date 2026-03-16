@@ -24,14 +24,7 @@ type ProgramPriceRow = {
     increment_percentage?: number | null;
 };
 
-const normalizeProgramName = (value: string) => {
-    return value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .trim();
-};
+const normalizeStr = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 
 export async function initializePaymentPlan(enrollmentId: string) {
     try {
@@ -99,34 +92,43 @@ export async function initializePaymentPlan(enrollmentId: string) {
         let needsAudit = false;
 
         if (programNames.length > 0) {
-            // ✅ DIRECTIVA: Leer increment_percentage por programa desde la Bóveda
-            // No se puede asumir una tasa fija global. Cada programa tiene su propio %.
-            const { data: legacyPrices, error: legacyPricesError } = await supabase
-                .from('program_prices')
-                .select('program_name, cash_price, valor_contado, increment_percentage')
+            let priceRows: ProgramPriceRow[] = [];
+
+            // 1. Intentar buscar en la tabla moderna dyt_program_prices
+            const { data: dytPrices, error: dytPricesError } = await supabase
+                .from('dyt_program_prices')
+                .select('program_name, valor_contado, increment_percentage')
                 .eq('semester', enrollment.semester);
 
-            if (legacyPricesError) {
-                console.error('[FINANCE INIT] Error consultando program_prices:', legacyPricesError);
-                return { success: false, error: 'Error consultando precios de programa.' };
+            if (!dytPricesError && dytPrices && dytPrices.length > 0) {
+                priceRows = dytPrices as ProgramPriceRow[];
+            } else {
+                // 2. Fallback a la tabla legacy program_prices
+                const { data: legacyPrices, error: legacyPricesError } = await supabase
+                    .from('program_prices')
+                    .select('program_name, cash_price, valor_contado, increment_percentage')
+                    .eq('semester', enrollment.semester);
+
+                if (legacyPricesError) {
+                    console.error('[FINANCE INIT] Error consultando program_prices legacy:', legacyPricesError);
+                    return { success: false, error: 'Error consultando precios de programa.' };
+                }
+                priceRows = (legacyPrices || []) as ProgramPriceRow[];
             }
 
-            const priceRows = (legacyPrices || []) as ProgramPriceRow[];
-
-            const roundUp10k = (val: number) => Math.ceil(val / 10000) * 10000;
+            const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
 
             // Mapa: nombre normalizado → { contado, incremento }
             const priceMap = new Map(
                 priceRows.map((row) => {
                     const cashValue = Number(row.valor_contado ?? row.cash_price ?? 0);
-                    // increment_percentage proviene de la Bóveda por programa (NO un valor global fijo)
                     const incrementValue = Number(row.increment_percentage ?? 0);
-                    return [normalizeProgramName(String(row.program_name || '')), { cash: cashValue, increment: incrementValue }];
+                    return [normalizeStr(String(row.program_name || '')), { cash: cashValue, increment: incrementValue }];
                 })
             );
 
             baseAmount = programNames.reduce((sum, name) => {
-                const key = normalizeProgramName(name);
+                const key = normalizeStr(name);
                 const pricing = priceMap.get(key);
                 
                 if (pricing === undefined || pricing === null) {
@@ -135,10 +137,13 @@ export async function initializePaymentPlan(enrollmentId: string) {
                     return sum + 0;
                 }
 
-                // Usar el precio de contado base (el plan tipo se determinará al sellar).
-                // El incremento real por programa se aplica en el EnrollmentAuditCard al sellar.
-                // Aquí guardamos el cash_price como estimado inicial.
-                console.log(`[FINANCE INIT] Programa: ${name} → Contado: ${pricing.cash}, Incremento: ${pricing.increment}%`);
+                // Si se encuentra, calcula el total financiado y se aplica roundup10k
+                const financed = pricing.cash * (1 + (pricing.increment / 100));
+                const roundedFinanced = roundup10k(financed);
+
+                console.log(`[FINANCE INIT] Programa: ${name} → Contado: ${pricing.cash}, Incremento: ${pricing.increment}%, Financiado Redondeado: ${roundedFinanced}`);
+                
+                // Retornar pricing.cash ya que el plan se sella en UI con `base_amount` como cash
                 return sum + pricing.cash;
             }, 0);
         } else {
