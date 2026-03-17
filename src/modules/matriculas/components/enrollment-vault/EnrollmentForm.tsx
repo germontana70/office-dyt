@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { StudentPicker } from './StudentPicker';
 import { GlobalCostsSection } from './GlobalCostsSection';
+import { ProgramPicker } from './ProgramPicker';
+import { saveNewEnrollment } from '@/app/actions/enrollment';
 
 interface EnrollmentFormProps {
     students: any[];
@@ -13,7 +16,12 @@ interface EnrollmentFormProps {
 }
 
 export function EnrollmentForm({ globalSettings, currentSemester, students, instruments, programs }: EnrollmentFormProps) {
+    const router = useRouter();
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [selectedPrograms, setSelectedPrograms] = useState<Array<{ id: string; name: string }>>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submissionError, setSubmissionError] = useState<string | null>(null);
+
     const [formValues, setFormValues] = useState({
         enrollment_fee_enabled: true,
         tshirt_quantity: 0,
@@ -33,6 +41,46 @@ export function EnrollmentForm({ globalSettings, currentSemester, students, inst
 
     const totalGlobal = (formValues.enrollment_fee_enabled ? (globalSettings?.enrollment_fee || 0) : 0) + 
                         (formValues.tshirt_quantity * (globalSettings?.tshirt_fee || 0));
+
+    // Función Polimórfica de motor financiero frontend
+    const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
+
+    const totalPrograms = selectedPrograms.reduce((sum, progSelect) => {
+        const progData = programs.find(p => p.id === progSelect.id);
+        if (!progData) return sum;
+        const cashValue = Number(progData.valor_contado || progData.cash_price || 0);
+        const increment = Number(progData.increment_percentage || 0);
+        return sum + roundup10k(cashValue * (1 + (increment / 100)));
+    }, 0);
+
+    const totalFinal = totalGlobal + totalPrograms;
+
+    const handleSubmit = async () => {
+        if (!selectedStudent || selectedPrograms.length === 0) return;
+        setIsSubmitting(true);
+        setSubmissionError(null);
+
+        const payload = {
+            student_id: selectedStudent.id,
+            semester: currentSemester as "2026-1",
+            enrollment_fee_enabled: formValues.enrollment_fee_enabled,
+            tshirt_quantity: formValues.tshirt_quantity,
+            tshirt_size: formValues.tshirt_size,
+            global_observations: formValues.global_observations,
+            payment_method: formValues.payment_method,
+            bank_entity: formValues.bank_entity,
+            reference_number: formValues.reference_number,
+            programs: selectedPrograms
+        };
+
+        const res = await saveNewEnrollment(payload);
+        if (res.success && res.data) {
+             router.push(`/dashboard/matriculas/${selectedStudent.id}/edit`);
+        } else {
+             setSubmissionError(res.error || 'Error desconocido.');
+             setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -58,26 +106,27 @@ export function EnrollmentForm({ globalSettings, currentSemester, students, inst
                                 </div>
                                 <div className="flex justify-between text-xs">
                                     <span className="text-white/40">Programas</span>
-                                    <span className="text-white font-bold">{formatCurrency(0)}</span>
+                                    <span className="text-white font-bold">{formatCurrency(totalPrograms)}</span>
                                 </div>
                                 <div className="pt-4 border-t border-white/5 flex justify-between items-end">
                                     <span className="text-sm font-black uppercase tracking-tighter text-white">Total Final</span>
                                     <span className="text-3xl font-black text-primary drop-shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]">
-                                        {formatCurrency(totalGlobal)}
+                                        {formatCurrency(totalFinal)}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
                         <button 
-                            disabled={!selectedStudent}
+                            disabled={!selectedStudent || selectedPrograms.length === 0 || isSubmitting}
+                            onClick={handleSubmit}
                             className={`w-full mt-6 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${
-                                selectedStudent 
+                                selectedStudent && selectedPrograms.length > 0 && !isSubmitting
                                 ? 'bg-primary text-black hover:bg-primary/90 shadow-primary/20' 
                                 : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
                             }`}
                         >
-                            {selectedStudent ? '🚀 Procesar Matrícula' : 'Falta Estudiante'}
+                            {isSubmitting ? 'Procesando...' : selectedStudent && selectedPrograms.length > 0 ? '🚀 Procesar Matrícula' : 'Faltan Campos'}
                         </button>
                     </div>
                  </div>
@@ -90,16 +139,19 @@ export function EnrollmentForm({ globalSettings, currentSemester, students, inst
                 onChange={handleFieldChange}
             />
 
-            {/* PRÓXIMAMENTE: Paso 3 - Programas */}
-            <div className="p-8 border-2 border-dashed border-white/5 rounded-[32px] flex flex-col items-center justify-center text-center opacity-40">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+            {/* Paso 3: Programas Académicos */}
+            <ProgramPicker 
+                programs={programs}
+                selectedPrograms={selectedPrograms}
+                onChange={setSelectedPrograms}
+            />
+
+            {/* Error Mensaje Temporal */}
+            {submissionError && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-bold text-center animate-pulse">
+                    ⚠️ {submissionError}
                 </div>
-                <h4 className="text-sm font-black uppercase tracking-[0.2em]">Programas y Horarios</h4>
-                <p className="text-[10px] uppercase font-bold text-white/20 mt-2">Bloqueado hasta completar pasos anteriores</p>
-            </div>
+            )}
         </div>
     );
 }
