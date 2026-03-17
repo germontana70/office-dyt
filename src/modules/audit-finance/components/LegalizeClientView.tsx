@@ -8,7 +8,7 @@ import { AuditSyncButton } from '@/modules/audit-finance/components/AuditSyncBut
 import { LegalizeConsole } from '@/modules/audit-finance/components/LegalizeConsole';
 import { legalizeEnrollmentProgram } from '@/app/actions/audit-finance';
 
-type LegalizeRow = {
+export type LegalizeRow = {
     enrollmentId: string;
     programId: string | null;
     studentName: string;

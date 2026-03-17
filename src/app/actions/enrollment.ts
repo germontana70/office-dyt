@@ -97,7 +97,7 @@ export async function saveNewEnrollment(payload: z.infer<typeof NewEnrollmentSch
 
     } catch (error: any) {
         if (error instanceof z.ZodError) {
-            return { success: false, error: 'Validación fallida: ' + error.errors[0].message };
+            return { success: false, error: 'Validación fallida: ' + error.issues[0].message };
         }
         console.error('[ENROLLMENT SAVER] Exception:', error);
         return { success: false, error: 'Error del servidor al registrar la matrícula.' };

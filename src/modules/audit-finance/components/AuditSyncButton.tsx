@@ -40,7 +40,7 @@ function AuditSyncButtonContent() {
 
 export function AuditSyncButton({ path }: AuditSyncButtonProps) {
     return (
-        <form action={refreshAuditData} className="inline-flex">
+        <form action={async (formData) => { await refreshAuditData(formData); }} className="inline-flex">
             <input type="hidden" name="path" value={path} />
             <AuditSyncButtonContent />
         </form>

@@ -1,5 +1,5 @@
 import { createClient } from '@/infra/services/server';
-import { LegalizeClientView } from '@/modules/audit-finance/components/LegalizeClientView';
+import { LegalizeClientView, type LegalizeRow } from '@/modules/audit-finance/components/LegalizeClientView';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,7 +131,7 @@ export default async function LegalizeAuditPage() {
         programMap.set(program.enrollment_id, current);
     });
 
-    const missingRows = enrollmentRows.flatMap((enrollment) => {
+    const missingRows = enrollmentRows.flatMap((enrollment): LegalizeRow[] => {
         const student = enrollment.student_id ? studentMap.get(enrollment.student_id) : null;
         const studentName = student
             ? `${student.first_name || ''} ${student.last_name || ''}`.trim()
@@ -162,7 +162,8 @@ export default async function LegalizeAuditPage() {
                 age,
                 semester: enrollment.semester
             }));
-    });
+    }) as LegalizeRow[];
+
 
     const programOptions = Array.from(
         new Set(
