@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { StudentPicker } from './StudentPicker';
 import { GlobalCostsSection } from './GlobalCostsSection';
 import { ProgramPicker } from './ProgramPicker';
+import { StudentVitalsPanel } from './StudentVitalsPanel';
 import { saveNewEnrollment } from '@/app/actions/enrollment';
+import type { HybridSearchResult } from '@/app/actions/students';
 
 interface EnrollmentFormProps {
     students: any[];
@@ -17,7 +19,7 @@ interface EnrollmentFormProps {
 
 export function EnrollmentForm({ globalSettings, currentSemester, students, instruments, programs }: EnrollmentFormProps) {
     const router = useRouter();
-    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [selectedStudent, setSelectedStudent] = useState<HybridSearchResult | null>(null);
     const [selectedPrograms, setSelectedPrograms] = useState<Array<{ id: string; name: string }>>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -131,6 +133,11 @@ export function EnrollmentForm({ globalSettings, currentSemester, students, inst
                     </div>
                  </div>
             </div>
+
+            {/* Datos Vitales del Estudiante (se muestra cuando hay estudiante seleccionado) */}
+            {selectedStudent && (
+                <StudentVitalsPanel student={selectedStudent as any} />
+            )}
 
             {/* Paso 2: Costos Globales */}
             <GlobalCostsSection 

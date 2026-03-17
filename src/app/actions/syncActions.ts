@@ -520,6 +520,92 @@ function buildStudentRecord(mapped: MappedFormResponse, semester: string) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// TRUTH TABLE RECORD BUILDER
+// Maps sanitized student to Tabla_Verdad_Estudiantes columns (Spanish, SIA 2.0 parity)
+// Parity: supabase_student_repo.py — create_from_form_response (truth table branch)
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Builds a record compatible with Tabla_Verdad_Estudiantes Spanish column schema.
+ * @see SIA 2.0 — supabase_student_repo.py
+ * REGLA DE ORO: All fields are nullable. Never throws. Unknown columns → silently omit.
+ */
+function buildTruthTableRecord(mapped: MappedFormResponse, semester: string): Record<string, unknown> {
+  const getVal = (keys: string[]): string | null => {
+    for (const k of keys) {
+      if (mapped[k] != null && String(mapped[k]).trim() !== '') return String(mapped[k]);
+    }
+    return null;
+  };
+
+  return {
+    // Core identity (Spanish column names — SIA 2.0 dict)
+    numero_de_identificacion: cleanDocumentNumber(getVal(['document_number'])),
+    tipo_de_documento_de_identificacion: getVal(['document_type']),
+    nombres_del_estudiante: toUpperOrEmpty(getVal(['first_name'])),
+    apellidos_del_estudiante: toUpperOrEmpty(getVal(['last_name'])),
+    genero: toUpperOrEmpty(getVal(['gender'])),
+    fecha_de_nacimiento: convertBirthDate(getVal(['birth_date'])),
+    edad: mapped.age ?? null,
+    lugar_de_expedicion_del_documento: toUpperOrEmpty(getVal(['document_expedition_place'])),
+
+    // Contact
+    email: getVal(['email']),
+    telefono_de_contacto: cleanPhone(getVal(['phone'])),
+    direccion_de_su_residencia: toUpperOrEmpty(getVal(['address'])),
+    barrio: toUpperOrEmpty(getVal(['neighborhood'])),
+
+    // Academic
+    grado_escolar_actual: getVal(['current_grade']),
+    nombre_de_la_institucion_educativa_actual: toUpperOrEmpty(getVal(['current_school'])),
+    programa_o_curso: getVal(['program_or_course']),
+    programa_a_estudiar: getVal(['program_to_study_now']),
+
+    // Health
+    grupo_sanguineo: toUpperOrEmpty(getVal(['blood_type'])),
+    factor_rh: toUpperOrEmpty(getVal(['rh_factor'])),
+    nombre_de_la_eps_o_medicina_prepagada: toUpperOrEmpty(getVal(['health_insurance'])),
+
+    // Father info (flattened)
+    nombre_completo_del_padre: toUpperOrEmpty(getVal(['father_full_name'])),
+    telefono_fijo_del_papa: cleanPhone(getVal(['father_landline'])),
+    celular_del_papa: cleanPhone(getVal(['father_mobile'])),
+    email_del_papa: getVal(['father_email']),
+    numero_de_documento_del_papa: cleanDocumentNumber(getVal(['father_document_number'])),
+
+    // Mother info (flattened)
+    nombre_completo_de_la_mama: toUpperOrEmpty(getVal(['mother_full_name'])),
+    telefono_fijo_de_la_mama: cleanPhone(getVal(['mother_landline'])),
+    celular_de_la_mama: cleanPhone(getVal(['mother_mobile'])),
+    email_de_la_mama: getVal(['mother_email']),
+    numero_de_documento_de_la_mama: cleanDocumentNumber(getVal(['mother_document_number'])),
+
+    // Guardian info (flattened)
+    nombre_completo_del_acudiente: toUpperOrEmpty(getVal(['guardian_full_name'])),
+    telefono_del_acudiente: cleanPhone(getVal(['guardian_phone'])),
+    direccion_del_acudiente: toUpperOrEmpty(getVal(['guardian_address'])),
+    email_del_acudiente: getVal(['guardian_email']),
+    numero_de_documento_del_acudiente: cleanDocumentNumber(getVal(['guardian_document_number'])),
+
+    // Semester tracking (audit fields)
+    ultimo_semestre_visto: semester,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// Export sanitizers for use in reintegration actions
+export {
+  cleanDocumentNumber,
+  toUpperOrEmpty,
+  convertBirthDate,
+  buildFamilyMember,
+  cleanPhone,
+  emptyToNull,
+  buildStudentRecord,
+  mapSheetRowToFormResponse,
+};
+
+// ═══════════════════════════════════════════════════════════
 // MAIN SERVER ACTION
 // ═══════════════════════════════════════════════════════════
 
@@ -663,21 +749,21 @@ export async function syncGoogleSheetToStudents(): Promise<SyncResult> {
       };
     }
 
-    // ─── STEP 5: Multi-Stage Upsert (Students + Enrollments) ───
-    // Parity: Transactional Vault Pattern
-    // 1. Upsert to students
-    // 2. Link with active semester in dyt_enrollments
+    // ─── STEP 5: Multi-Stage Upsert (Students + Truth Table + Enrollments) ───
+    // Parity: Transactional Vault Pattern — Dual Persistence
+    // 1. Upsert to students (semestre activo)
+    // 2. Upsert to Tabla_Verdad_Estudiantes (REGLA DE ORO: fallo silencioso)
+    // 3. Link with active semester in dyt_enrollments
     const BATCH_SIZE = 50;
     let totalUpserted = 0;
 
     for (let i = 0; i < studentRecords.length; i += BATCH_SIZE) {
       const batch = studentRecords.slice(i, i + BATCH_SIZE);
 
-      // 5.1: Upsert Students
-      // Remove temporary fields not in the database schema
+      // 5.1: Upsert Students (semestre activo)
       const cleanStudentBatch = batch.map(record => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { row_hash, program_to_study_now, ...rest } = record;
+        const { row_hash, program_to_study_now, ...rest } = record as any;
         return rest;
       });
 
@@ -696,10 +782,73 @@ export async function syncGoogleSheetToStudents(): Promise<SyncResult> {
 
       totalUpserted += upsertedStudents?.length || 0;
 
-      // 5.2: Upsert Enrollments (Ensures "Transactional Vault" slot)
+      // 5.2: Doble Upsert → Tabla_Verdad_Estudiantes (REGLA DE ORO: silencioso si falla)
+      // Rebuild truth table records from the original mapped data
+      const truthTableBatch = batch.map(record => {
+        // Reconstruct mapped from the student record enough for truth table
+        const mapped: MappedFormResponse = {
+          document_number: (record as any).document_number,
+          document_type: (record as any).document_type,
+          first_name: (record as any).first_name,
+          last_name: (record as any).last_name,
+          gender: (record as any).gender,
+          birth_date: (record as any).birth_date ? String((record as any).birth_date) : null,
+          age: (record as any).age,
+          document_expedition_place: (record as any).document_expedition_place,
+          email: (record as any).email,
+          phone: (record as any).phone,
+          address: (record as any).address,
+          neighborhood: (record as any).neighborhood,
+          current_grade: (record as any).current_grade,
+          current_school: (record as any).current_school,
+          program_or_course: (record as any).program_or_course,
+          program_to_study_now: (record as any).program_to_study_now,
+          blood_type: (record as any).blood_type,
+          rh_factor: (record as any).rh_factor,
+          health_insurance: (record as any).health_insurance,
+          // Father (extract from JSONB)
+          father_full_name: (record as any).father_info?.full_name,
+          father_mobile: (record as any).father_info?.mobile,
+          father_landline: (record as any).father_info?.landline,
+          father_email: (record as any).father_info?.email,
+          father_document_number: (record as any).father_info?.document_number,
+          // Mother
+          mother_full_name: (record as any).mother_info?.full_name,
+          mother_mobile: (record as any).mother_info?.mobile,
+          mother_landline: (record as any).mother_info?.landline,
+          mother_email: (record as any).mother_info?.email,
+          mother_document_number: (record as any).mother_info?.document_number,
+          // Guardian
+          guardian_full_name: (record as any).guardian_info_detailed?.full_name,
+          guardian_phone: (record as any).guardian_info_detailed?.mobile,
+          guardian_address: (record as any).guardian_info_detailed?.address,
+          guardian_email: (record as any).guardian_info_detailed?.email,
+          guardian_document_number: (record as any).guardian_info_detailed?.document_number,
+        };
+        return buildTruthTableRecord(mapped, semester);
+      }).filter(r => r.numero_de_identificacion); // Only valid entries
+
+      if (truthTableBatch.length > 0) {
+        try {
+          const { error: truthError } = await supabase
+            .from('Tabla_Verdad_Estudiantes')
+            .upsert(truthTableBatch as any[], {
+              onConflict: 'numero_de_identificacion',
+              ignoreDuplicates: false,
+            });
+
+          if (truthError) {
+            // REGLA DE ORO: Log silencioso — no bloquea el proceso principal.
+            console.warn(`[SYNC] Tabla_Verdad_Estudiantes batch ${Math.floor(i / BATCH_SIZE) + 1} warning: ${truthError.message}`);
+          }
+        } catch (truthException) {
+          console.warn('[SYNC] Tabla_Verdad_Estudiantes upsert exception (silenced):', truthException);
+        }
+      }
+
+      // 5.3: Upsert Enrollments slot in dyt_enrollments
       if (upsertedStudents && upsertedStudents.length > 0) {
         const enrollmentBatch = upsertedStudents.map(s => {
-          // Find original record in batch to retrieve the mapped program name
           const original = batch.find(b => (b as any).document_number === s.document_number);
           
           return {
