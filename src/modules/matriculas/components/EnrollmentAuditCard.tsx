@@ -263,7 +263,7 @@ function FileUploaderCell({
 }
 
 const ROOM_OPTIONS = [
-    'SALÓN 201', 'SALÓN 202', 'SALÓN 203A', 'SALÓN 203B', 'SALÓN 204A -M.A', 'SALÓN 204B- J.P', 'SALÓN 205-A', 'SALÓN 205-B', 'SALÓN 205-C', 'SALÓN 206', 'SALÓN 207', 'SALÓN 208', 'SALÓN 209', 'MASTER GERMÁN', 'CLASES VIRTUALES - SALA 1 - Dones y Talentos', 'Clases canceladas'
+    'SALÓN 201', 'SALÓN 202', 'SALÓN 203A', 'SALÓN 203B', 'SALÓN 204A -M.A', 'SALÓN 204B- J.P', 'SALÓN 205-A', 'SALÓN 205-B', 'SALÓN 205-C', 'SALÓN 206', 'SALÓN 207', 'SALÓN 208', 'SALÓN 209', 'MASTER GERMÁN', 'CLASES VIRTUALES - SALA 1 - Dones y Talentos'
 ];
 const DURATION_OPTIONS = ['30 min', '45 min', '60 min', '120 min'];
 const DAY_OPTIONS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -441,15 +441,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     const [includeEnrollmentFee, setIncludeEnrollmentFee] = useState(true);
     const [includeUniformFee, setIncludeUniformFee] = useState(true);
-    const [installments, setInstallments] = useState(1);
     const [paymentMethod, setPaymentMethod] = useState('Efectivo');
     const [referenceCode, setReferenceCode] = useState('');
     const [financialEntity, setFinancialEntity] = useState('');
-    const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [installmentsDetails, setInstallmentsDetails] = useState<any[]>([]);
-
-    const [initialPayment, setInitialPayment] = useState(0);
-    const [discountPercentage, setDiscountPercentage] = useState(0);
     const [programPrices, setProgramPrices] = useState<
         Record<string, { cash: number; increment: number; financed: number; installments?: Record<string, { total?: number }> }>
     >({});
@@ -463,7 +458,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         return (enrollment?.programs || []).map((prog: any) => ({
             ...prog,
             schedules: prog.schedules?.length ? prog.schedules : (prog.day_1 ? [{ id: `sch-init-${prog.id}`, day: prog.day_1, startTime: prog.time_1 || '15:00', duration: '60 min', room: 'SALÓN 201' }] : [{ id: `sch-init-${prog.id}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }]),
-            observations: prog.observations || ''
+            observations: prog.observations || '',
+            installmentsCount: 1,
+            firstPaymentDate: format(new Date(), 'yyyy-MM-dd'),
+            discount: 0
         }));
     });
     const [deletedPrograms, setDeletedPrograms] = useState<Set<string>>(new Set());
@@ -486,22 +484,13 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     // Sincronizar estado con el plan de pago cargado
     useEffect(() => {
-        if (paymentPlan) {
-            if (paymentPlan.discount_percentage !== undefined) {
-                setDiscountPercentage(Number(paymentPlan.discount_percentage));
-            }
-            if (paymentPlan.number_of_installments) {
-                setInstallments(Number(paymentPlan.number_of_installments));
-            }
-            if (paymentPlan.plan_type) {
-                setInstallments(paymentPlan.plan_type === 'contado' ? 1 : (paymentPlan.number_of_installments || 1));
-            }
-            if (paymentPlan.start_date) {
-                setStartDate(paymentPlan.start_date);
-            }
-            if (paymentPlan.installments_details) {
-                setInstallmentsDetails(paymentPlan.installments_details);
-            }
+        if (paymentPlan && selectedPrograms.length > 0) {
+            setSelectedPrograms(prev => prev.map(prog => ({
+                ...prog,
+                discount: paymentPlan.discount_percentage ? Number(paymentPlan.discount_percentage) : prog.discount,
+                installmentsCount: paymentPlan.number_of_installments ? Number(paymentPlan.number_of_installments) : prog.installmentsCount,
+                firstPaymentDate: paymentPlan.start_date ? paymentPlan.start_date : prog.firstPaymentDate
+            })));
         }
     }, [paymentPlan]);
 
@@ -675,7 +664,6 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         if (!paymentPlan) return;
         setIncludeEnrollmentFee(Number(paymentPlan.enrollment_fee || 0) > 0);
         setIncludeUniformFee(Number(paymentPlan.uniform_fee || 0) > 0);
-        setInstallments(paymentPlan.plan_type === 'contado' ? 1 : 3);
     }, [paymentPlan]);
 
     const studentData =
@@ -717,8 +705,6 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const ageBadgeLabel = ageIsNumber ? `${ageValue} AÑOS` : ageValue;
     const isMinor = ageIsNumber ? ageValue < 18 : false;
 
-    const installmentCount = clampInstallments(installments);
-    const planType = installmentCount === 1 ? 'contado' : 'cuotas';
 
     const baseCashAmount = (() => {
         if (!selectedPrograms) return Number(paymentPlan?.base_amount || 0);
@@ -732,35 +718,23 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     const programBaseAmount = (() => {
         if (!selectedPrograms) return baseCashAmount;
-        const discountFactor = 1 - (discountPercentage / 100);
 
         return selectedPrograms.reduce((sum: number, program: any) => {
             const selectedKey = programSelection[program.id];
             const key = selectedKey || normalizeProgramKey(program.program_name || '');
             const pricing = programPrices[key];
-
             const cash = pricing?.cash || 0;
-            // ✅ DIRECTIVA: El % de incremento viene de la Bóveda para ESTE programa específico.
-            // Si no hay dato (pricing no encontrado), usar 0 es más seguro que asumir un % arbitrario.
-            const increment = (pricing?.increment !== undefined && pricing?.increment !== null)
-                ? pricing.increment
-                : 0;
-
-            // Misión 3: Motor de Beca
-            // 1. Aplicar descuento al contado
+            const increment = (pricing?.increment !== undefined && pricing?.increment !== null) ? pricing.increment : 0;
+            const discountFactor = 1 - (program.discount / 100);
             const discountedCash = cash * discountFactor;
+            const n = clampInstallments(program.installmentsCount);
 
             let price = discountedCash;
-            if (installmentCount > 1) {
-                // 2. Aplicar incremento sobre el valor con beca
-                const financedAmount = discountedCash * (1 + (increment / 100));
-                // 3. RoundUp 10k
-                price = roundup10k(financedAmount);
+            if (n > 1) {
+                price = roundup10k(discountedCash * (1 + (increment / 100)));
             } else {
-                // Si es contado, solo redondeamos a 1000 por estética o dejamos directo
                 price = Math.ceil(discountedCash / 1000) * 1000;
             }
-
             return sum + price;
         }, 0);
     })();
@@ -802,44 +776,25 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     })();
 
     const scholarshipAmount = (() => {
-        // Calcular cuánto se descontó en total comparado con el full cash
-        const fullCash = selectedPrograms.reduce((sum: number, p: any) => {
+        return selectedPrograms.reduce((sum: number, p: any) => {
             const key = programSelection[p.id] || normalizeProgramKey(p.program_name || '');
-            return sum + (programPrices[key]?.cash || 0);
+            return sum + ((programPrices[key]?.cash || 0) * (p.discount / 100));
         }, 0);
-        return fullCash * (discountPercentage / 100);
     })();
     const enrollmentFeeValue = includeEnrollmentFee ? globalFees.enrollment_fee : 0;
     const uniformFeeValue = includeUniformFee ? globalFees.tshirt_fee : 0;
     const totalAmount = programBaseAmount + enrollmentFeeValue + uniformFeeValue;
     const additionalDisplay = enrollmentFeeValue + uniformFeeValue;
 
+    // Monitor de Cartera en Tiempo Real (Soporte Beca 100%)
+    const totalPaid = installmentsDetails.reduce((sum, inst) => sum + (Number(inst.amount_paid) || 0), 0);
+    const remainingBalance = Math.max(0, totalAmount - totalPaid);
 
-    const installmentSchedule = (() => {
-        if (installmentCount === 1) return [];
+    // Es Paz y Salvo si hay programas y lo pagado iguala (o supera) lo acordado (incluye $0)
+    const isPazYSalvo = selectedPrograms.length > 0 && totalPaid >= totalAmount;
+    const isFullCash = selectedPrograms.every(p => p.installmentsCount === 1);
 
-        // Misión 1: Solo el programa se financia
-        const n = installmentCount;
-        const academicBase = roundup10k(programBaseAmount / n);
 
-        return Array.from({ length: n }, (_, idx) => {
-            let amount = academicBase;
-            if (idx === n - 1) {
-                // Última cuota es el residuo académico
-                amount = programBaseAmount - (academicBase * (n - 1));
-            }
-
-            // Misión 2: Los cargos de contado van en la Cuota 1
-            if (idx === 0) {
-                amount += enrollmentFeeValue + uniformFeeValue;
-            }
-
-            return {
-                amount,
-                dueDate: format(addMonths(new Date(), idx + 1), 'yyyy-MM-dd')
-            };
-        });
-    })();
 
     const programNeedsInstrument = (programName: string) => getProgramCategory(programName) === '1a1';
 
@@ -869,14 +824,12 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         }
     };
 
-    // Misión 1 & 2: Proyección de Cuotas con Separación de Conceptos MULTI-PROGRAMA
+    // Motor Matemático Descentralizado por Programa
     useEffect(() => {
         if (!selectedPrograms) return;
-        const n = planType === 'contado' ? 1 : installments;
-        const baseDate = startDate ? new Date(startDate) : new Date();
 
         setInstallmentsDetails((prevDetails) => {
-            let isFirstProgram = true;
+            let isFirstProgramOverall = true;
             const newDetails: any[] = [];
 
             selectedPrograms.forEach((prog: any) => {
@@ -884,16 +837,15 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 const pricing = programPrices[key];
                 const cash = pricing?.cash || 0;
                 const increment = pricing?.increment || 0;
-                const discountFactor = 1 - ((discountPercentage || 0) / 100);
+                
+                const n = clampInstallments(prog.installmentsCount);
+                const baseDate = new Date(prog.firstPaymentDate);
+                const discountFactor = 1 - (prog.discount / 100);
 
                 const discountedCash = cash * discountFactor;
-
-                let programAmount = discountedCash;
-                if (n > 1) {
-                    programAmount = roundup10k(discountedCash * (1 + (increment / 100)));
-                } else {
-                    programAmount = Math.ceil(discountedCash / 1000) * 1000;
-                }
+                let programAmount = n > 1 
+                    ? roundup10k(discountedCash * (1 + (increment / 100)))
+                    : Math.ceil(discountedCash / 1000) * 1000;
 
                 const academicBase = n > 1 ? roundup10k(programAmount / n) : programAmount;
 
@@ -907,10 +859,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     }
 
                     let amount_due = academicPart;
-                    let concept = 'Cuota Programa';
+                    let concept = n === 1 ? 'Contado' : `Cuota ${i+1}/${n}`;
                     const breakdown: any[] = [{ label: 'Cuota Académica', value: academicPart }];
 
-                    if (i === 0 && isFirstProgram) {
+                    if (i === 0 && isFirstProgramOverall) {
                         if (enrollmentFeeValue > 0) {
                             amount_due += enrollmentFeeValue;
                             breakdown.push({ label: 'Inscripción', value: enrollmentFeeValue });
@@ -918,9 +870,6 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         if (uniformFeeValue > 0) {
                             amount_due += uniformFeeValue;
                             breakdown.push({ label: 'Camiseta', value: uniformFeeValue });
-                        }
-                        if (enrollmentFeeValue > 0 || uniformFeeValue > 0) {
-                            concept += ' + Cargos Administrativos';
                         }
                     }
 
@@ -933,30 +882,22 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         payment_date: existing.payment_date || null,
                         reference: existing.reference || '',
                         entity: existing.entity || '',
-                        concept,
+                        concept: i === 0 && isFirstProgramOverall && (enrollmentFeeValue > 0 || uniformFeeValue > 0) 
+                            ? `${concept} + Cargos` 
+                            : concept,
                         evidence_url: existing.evidence_url || null,
                         breakdown
                     });
                 }
-                isFirstProgram = false;
+                isFirstProgramOverall = false;
             });
             return newDetails;
         });
-    }, [installments, planType, selectedPrograms, programSelection, programPrices, discountPercentage, enrollmentFeeValue, uniformFeeValue, startDate]);
+    }, [selectedPrograms, programSelection, programPrices, enrollmentFeeValue, uniformFeeValue]);
 
-    // Sincronizar con plan existente si viene de la DB
     useEffect(() => {
-        if (paymentPlan?.start_date) {
-            setStartDate(paymentPlan.start_date);
-        }
         if (paymentPlan?.installments_details && paymentPlan.installments_details.length > 0) {
             setInstallmentsDetails(paymentPlan.installments_details);
-            if (paymentPlan.plan_type === 'cuotas') {
-                setInstallments(paymentPlan.installments_details.length);
-            } else {
-                setInstallments(1);
-            }
-            // Eliminado setPlanType ya que es derivado
         }
     }, [paymentPlan]);
 
@@ -1010,16 +951,16 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             enrollment_fee: enrollmentFeeValue,
             uniform_fee: uniformFeeValue,
             total_amount: totalAmount,
-            plan_type: planType,
+            plan_type: selectedPrograms[0]?.installmentsCount > 1 ? 'cuotas' : 'contado',
             initial_payment: 0,
             payment_method: 'N/A',
             reference_code: '',
             notes,
-            start_date: startDate,
+            start_date: selectedPrograms[0]?.firstPaymentDate,
             installments_details: installmentsDetails,
             program_instruments: programInstruments,
             program_updates: programUpdates,
-            discount_percentage: discountPercentage // Trazabilidad de Auditoría
+            discount_percentage: selectedPrograms[0]?.discount // Trazabilidad de Auditoría
         });
 
         if (result?.success) {
@@ -1106,8 +1047,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                 <p className="text-3xl font-black tracking-tighter text-white uppercase italic flex items-center gap-3">
                                     {enrollment.student.first_name} {enrollment.student.last_name}
                                     <span className={`text-base not-italic font-black px-3 py-1 rounded-lg ${isMinor
-                                            ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30'
-                                            : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/40'
+                                        ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30'
+                                        : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/40'
                                         }`}>
                                         ({ageBadgeLabel})
                                     </span>
@@ -1119,8 +1060,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         </div>
                         <div
                             className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${enrollment.status === 'Activa'
-                                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                                    : 'bg-white/5 border-white/10 text-white/40'
+                                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                                : 'bg-white/5 border-white/10 text-white/40'
                                 }`}
                         >
                             {enrollment.status}
@@ -1352,12 +1293,96 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                             </div>
                                         )}
 
+                                        {/* ── EXCEPCIONES Y CUOTAS (por programa) ── */}
+                                        <div className="pt-3 mt-1 border-t border-white/5 space-y-3">
+                                            <h5 className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                                                Excepciones y Cuotas
+                                            </h5>
+
+                                            {progIdx === 0 && (
+                                                <>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-bold text-white/70">Cobrar Inscripcion</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={includeEnrollmentFee}
+                                                            onChange={(e) => setIncludeEnrollmentFee(e.target.checked)}
+                                                            className="h-4 w-4 accent-primary"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-bold text-white/70">Cobrar Camiseta</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={includeUniformFee}
+                                                            onChange={(e) => setIncludeUniformFee(e.target.checked)}
+                                                            className="h-4 w-4 accent-primary"
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                                                    Fecha Primera Cuota
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={prog.firstPaymentDate}
+                                                    onChange={(e) => setSelectedPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, firstPaymentDate: e.target.value } : p))}
+                                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:border-primary focus:outline-none"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                                                    Numero de Cuotas
+                                                </label>
+                                                <select
+                                                    value={clampInstallments(prog.installmentsCount)}
+                                                    onChange={(e) => setSelectedPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, installmentsCount: Number(e.target.value) } : p))}
+                                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
+                                                >
+                                                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                                                        <option key={n} value={n}>
+                                                            {n} {n === 1 ? '(Contado)' : 'Cuotas'}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-3 pt-2">
+                                                <div className="flex justify-between items-center">
+                                                    <label className="text-[10px] font-black uppercase text-primary tracking-widest">
+                                                        Beca / Descuento Hum.
+                                                    </label>
+                                                    <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black">
+                                                        {prog.discount}%
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="100"
+                                                    step="5"
+                                                    value={prog.discount}
+                                                    onChange={(e) => setSelectedPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, discount: Number(e.target.value) } : p))}
+                                                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-primary"
+                                                />
+                                                <div className="flex justify-between text-[8px] text-white/20 uppercase font-black">
+                                                    <span>0%</span>
+                                                    <span>Beneficio Social</span>
+                                                    <span>100%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 ))}
 
                             {selectedPrograms && selectedPrograms.length < 8 && (
                                 <button
-                                    onClick={() => setSelectedPrograms(prev => [...prev, { id: `new-${Date.now()}`, program_name: '', schedules: [{ id: `sch-${Date.now()}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }], observations: '' }])}
+                                    onClick={() => setSelectedPrograms(prev => [...prev, { id: `new-${Date.now()}`, program_name: '', schedules: [{ id: `sch-${Date.now()}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }], observations: '', installmentsCount: 1, firstPaymentDate: format(new Date(), 'yyyy-MM-dd'), discount: 0 }])}
                                     className="w-full py-4 rounded-xl border-2 border-dashed border-primary/40 bg-primary/10 text-primary font-black uppercase tracking-widest hover:bg-primary/20 hover:border-primary/80 transition-all flex items-center justify-center gap-2 mt-2 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]"
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1370,85 +1395,6 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="p-4 bg-black/40 backdrop-blur-md border border-white/5 rounded-2xl space-y-4">
-                            <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                Excepciones y Cuotas
-                            </h4>
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-white/70">Cobrar Inscripcion</span>
-                                <input
-                                    type="checkbox"
-                                    checked={includeEnrollmentFee}
-                                    onChange={(e) => setIncludeEnrollmentFee(e.target.checked)}
-                                    className="h-4 w-4 accent-primary"
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-white/70">Cobrar Camiseta</span>
-                                <input
-                                    type="checkbox"
-                                    checked={includeUniformFee}
-                                    onChange={(e) => setIncludeUniformFee(e.target.checked)}
-                                    className="h-4 w-4 accent-primary"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                    Fecha Primera Cuota
-                                </label>
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:border-primary focus:outline-none"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                    Numero de Cuotas
-                                </label>
-                                <select
-                                    value={installmentCount}
-                                    onChange={(e) => setInstallments(Number(e.target.value))}
-                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
-                                >
-                                    {[1, 2, 3, 4, 5, 6].map((n) => (
-                                        <option key={n} value={n}>
-                                            {n} {n === 1 ? '(Contado)' : 'Cuotas'}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-3 pt-2">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-black uppercase text-primary tracking-widest">
-                                        Beca / Descuento Hum.
-                                    </label>
-                                    <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black">
-                                        {discountPercentage}%
-                                    </span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    step="5"
-                                    value={discountPercentage}
-                                    onChange={(e) => setDiscountPercentage(Number(e.target.value))}
-                                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-primary"
-                                />
-                                <div className="flex justify-between text-[8px] text-white/20 uppercase font-black">
-                                    <span>0%</span>
-                                    <span>Beneficio Social</span>
-                                    <span>100%</span>
-                                </div>
-                            </div>
-                        </div>
 
                         <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden border border-white/5 shadow-xl">
                             <h4 className="text-[10px] font-black uppercase text-slate-500 dark:text-white/30 tracking-widest flex items-center gap-2">
@@ -1576,71 +1522,76 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         </div>
                     </div>
 
-                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
+                    <div className={`p-5 rounded-[2rem] border transition-all duration-500 flex flex-col md:flex-row items-center justify-between gap-6 ${isPazYSalvo ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-yellow-500/5 border-yellow-500/10'}`}>
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-500 ${isPazYSalvo ? 'bg-emerald-500/20 text-emerald-400 scale-110 shadow-[0_0_20px_rgba(52,211,153,0.3)]' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isPazYSalvo ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"} />
                                 </svg>
                             </div>
-                            <div>
-                                <p className="text-[9px] font-black text-yellow-500/50 uppercase tracking-[0.1em]">
-                                    Integridad Financiera
-                                </p>
-                                <p className="text-[10px] font-bold text-white/60">
-                                    {isPending ? 'Inicializando plan de pago...' : 'Plan financiero reactivo.'}
-                                </p>
-                                {paymentPlanError && (
-                                    <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
-                                        <svg className="w-3.5 h-3.5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        <p className="text-[9px] font-bold text-yellow-500/90 uppercase tracking-tight">
-                                            Plan de pagos pendiente de inicialización (Lookup fallido)
-                                        </p>
+                            <div className="space-y-1">
+                                {isPazYSalvo ? (
+                                    <div className="bg-emerald-500 text-black font-black text-[11px] px-3 py-1 rounded-full animate-bounce tracking-widest shadow-[0_0_15px_rgba(52,211,153,0.5)]">
+                                        ✓ ESTUDIANTE A PAZ Y SALVO
                                     </div>
+                                ) : (
+                                    <p className="text-[10px] font-black text-yellow-500/50 uppercase tracking-[0.2em]">Monitor de Cartera</p>
                                 )}
+                                <p className="text-[11px] font-bold text-white/70">
+                                    {isPending ? 'Procesando auditoría...' : isPazYSalvo ? 'Operación liquidada correctamente.' : 'Pendiente de recaudo para cierre.'}
+                                </p>
                             </div>
                         </div>
-                        <div className="text-right space-y-2">
-                            <div className="flex flex-col items-end">
-                                <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest flex items-center gap-2">
-                                    Total Calculado
-                                    <span className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 px-1.5 py-0.5 rounded text-[8px] font-black border border-yellow-500/20">
-                                        Liquidación Final {enrollment.semester}
-                                    </span>
-                                </p>
-                                <p className="text-3xl font-black text-yellow-600 dark:text-yellow-500/90 leading-none">
-                                    {formatCurrency(totalAmount || 0)}
+
+                        <div className="flex flex-wrap items-center gap-8 text-center md:text-right">
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-cyan-400/50 uppercase tracking-widest">Valor Recaudado</p>
+                                <p className="text-2xl font-black text-cyan-400 font-mono tracking-tighter">
+                                    {formatCurrency(totalPaid)}
                                 </p>
                             </div>
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Saldo Pendiente</p>
+                                <p className={`text-2xl font-black font-mono tracking-tighter transition-colors ${remainingBalance > 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                                    {formatCurrency(remainingBalance)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                            <div className="bg-black/40 p-3 rounded-xl border border-white/5 space-y-1.5 min-w-[240px] shadow-inner">
+                    <div className="text-right space-y-2">
+                        <div className="flex flex-col items-end">
+                            <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                Total Calculado
+                                <span className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 px-1.5 py-0.5 rounded text-[8px] font-black border border-yellow-500/20">
+                                    Liquidación Final {enrollment.semester}
+                                </span>
+                            </p>
+                            <p className="text-3xl font-black text-yellow-600 dark:text-yellow-500/90 leading-none">
+                                {formatCurrency(totalAmount || 0)}
+                            </p>
+                        </div>
+
+                        <div className="bg-black/40 p-3 rounded-xl border border-white/5 space-y-1.5 min-w-[240px] shadow-inner">
+                            <div className="flex justify-between text-[11px] font-bold text-white/40">
+                                <span>VALOR COMERCIAL MATRÍCULA</span>
+                                <span className="line-through">{formatCurrency(baseCashAmount || 0)}</span>
+                            </div>
+                            {scholarshipAmount > 0 && (
+                                <div className="flex justify-between text-[11px] font-black text-emerald-400">
+                                    <span>BECA / BENEFICIO SOCIAL ACUMULADO</span>
+                                    <span>-{formatCurrency(scholarshipAmount)}</span>
+                                </div>
+                            )}
+                            {additionalDisplay > 0 && (
                                 <div className="flex justify-between text-[11px] font-bold text-white/40">
-                                    <span>VALOR COMERCIAL MATRÍCULA</span>
-                                    <span className="line-through">{formatCurrency(baseCashAmount || 0)}</span>
+                                    <span>INSCRIPCIÓN + CAMISETA</span>
+                                    <span>{formatCurrency(additionalDisplay || 0)}</span>
                                 </div>
-                                {discountPercentage > 0 && (
-                                    <div className="flex justify-between text-[11px] font-black text-emerald-400">
-                                        <span>BECA / BENEFICIO SOCIAL ({discountPercentage}%)</span>
-                                        <span>-{formatCurrency(scholarshipAmount)}</span>
-                                    </div>
-                                )}
-                                {additionalDisplay > 0 && (
-                                    <div className="flex justify-between text-[11px] font-bold text-white/40">
-                                        <span>INSCRIPCIÓN + CAMISETA</span>
-                                        <span>{formatCurrency(additionalDisplay || 0)}</span>
-                                    </div>
-                                )}
-                                <div className="border-t border-white/10 pt-1.5 flex justify-between text-[12px] font-black text-yellow-500 uppercase tracking-tight">
-                                    <span>TOTAL ACORDADO</span>
-                                    <span>{formatCurrency(totalAmount || 0)}</span>
-                                </div>
+                            )}
+                            <div className="border-t border-white/10 pt-1.5 flex justify-between text-[12px] font-black text-yellow-500 uppercase tracking-tight">
+                                <span>TOTAL ACORDADO</span>
+                                <span>{formatCurrency(totalAmount || 0)}</span>
                             </div>
                         </div>
                     </div>
@@ -1660,7 +1611,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         </button>
                         <button
                             onClick={handleSeal}
-                            disabled={isSealing || isPending}
+                            disabled={isSealing || isPending || (isFullCash && remainingBalance > 0)}
                             className="px-8 py-3 bg-primary text-black border border-primary rounded-2xl font-black uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
                         >
                             {isSealing ? (
@@ -1940,9 +1891,9 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                 </div>
                                             );
                                         })}
-                                        {discountPercentage > 0 && (
+                                        {scholarshipAmount > 0 && (
                                             <div className="flex justify-between text-[10px] text-emerald-400 font-bold">
-                                                <span>Beca Humanitaria ({discountPercentage}%)</span>
+                                                <span>Beca / Beneficio Social</span>
                                                 <span className="font-mono">-{formatCurrency(scholarshipAmount)}</span>
                                             </div>
                                         )}
