@@ -1,6 +1,8 @@
 'use client';
 
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
+import { User, Phone, Mail, MapPin, Activity, Heart, Droplets, ShieldPlus, Users, Smartphone, FileText, CalendarDays, Hash } from 'lucide-react';
+import { ReactNode } from 'react';
 
 interface FamilyMember {
     full_name?: string;
@@ -37,105 +39,170 @@ interface StudentVitalsPanelProps {
     };
 }
 
-function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
-    if (!value) return null;
+// Helper para Fechas Legibles
+function formatIsoDate(dateString?: string | null): string {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch {
+        return dateString;
+    }
+}
+
+// Componente para Fila de Información Anti-Overflow
+function InfoRow({ label, value, icon }: { label: string; value?: string | number | null; icon?: ReactNode }) {
+    const hasValue = value !== null && value !== undefined && value !== '';
     return (
-        <div className="flex justify-between items-start py-2 border-b border-white/5 gap-4">
-            <span className="text-[9px] font-black uppercase tracking-widest text-white/30 shrink-0">{label}</span>
-            <span className="text-xs font-bold text-white/80 text-right">{String(value)}</span>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-2 border-b border-white/5 gap-2 px-1">
+            <div className="flex items-center gap-1.5 shrink-0">
+                {icon && <span className="text-white/40">{icon}</span>}
+                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">{label}</span>
+            </div>
+            {hasValue ? (
+                <span className="text-xs font-bold text-white/90 text-left sm:text-right break-words break-all sm:break-normal max-w-full">
+                    {String(value)}
+                </span>
+            ) : (
+                <span className="text-xs font-semibold text-gray-500 italic text-left sm:text-right">No registrado</span>
+            )}
         </div>
     );
 }
 
+// Tarjeta Exclusiva para la Familia encapsulada en un Details
 function FamilyMemberCard({ title, member, color }: { title: string; member?: FamilyMember; color: 'violet' | 'cyan' | 'pink' }) {
-    if (!member?.full_name) return null;
+    if (!member || (!member.full_name && !member.document_number && !member.mobile)) return null;
 
-    const borderColor = color === 'violet' ? 'border-violet-500/20' : color === 'cyan' ? 'border-cyan-500/20' : 'border-pink-500/20';
+    const borderColor = color === 'violet' ? 'border-violet-500/30' : color === 'cyan' ? 'border-cyan-500/30' : 'border-pink-500/30';
     const textColor = color === 'violet' ? 'text-violet-400' : color === 'cyan' ? 'text-cyan-400' : 'text-pink-400';
+    const bgColor = color === 'violet' ? 'bg-violet-500/5' : color === 'cyan' ? 'bg-cyan-500/5' : 'bg-pink-500/5';
 
     return (
-        <div className={`p-4 bg-black/40 border ${borderColor} rounded-2xl space-y-1`}>
-            <p className={`text-[10px] font-black uppercase tracking-widest ${textColor} mb-2`}>{title}</p>
-            <InfoRow label="Nombre" value={member.full_name} />
-            <InfoRow label="Celular" value={member.mobile} />
-            {member.landline && <InfoRow label="Fijo" value={member.landline} />}
-            <InfoRow label="Email" value={member.email} />
-            <InfoRow label="Doc." value={member.document_number} />
-            {member.address && <InfoRow label="Dirección" value={member.address} />}
-        </div>
+        <details className="group border border-white/10 rounded-2xl overflow-hidden bg-black/40 hover:bg-black/60 transition-colors">
+            <summary className={`flex items-center justify-between p-4 cursor-pointer list-none ${bgColor}`}>
+                <div className="flex items-center gap-2">
+                    <User className={`w-4 h-4 ${textColor}`} />
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${textColor}`}>{title}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white/80 opacity-0 group-open:opacity-100 transition-opacity truncate max-w-[150px]">
+                        {member.full_name || 'No registrado'}
+                    </span>
+                    <span className="text-white/40 transition-transform group-open:rotate-180">↓</span>
+                </div>
+            </summary>
+            
+            <div className={`p-4 border-t ${borderColor} space-y-1`}>
+                <InfoRow label="Nombre Completo" value={member.full_name} icon={<FileText className="w-3 h-3" />} />
+                <InfoRow label="Identificación" value={member.document_number} icon={<Hash className="w-3 h-3" />} />
+                <InfoRow label="Móvil" value={member.mobile} icon={<Smartphone className="w-3 h-3" />} />
+                <InfoRow label="Fijo" value={member.landline} icon={<Phone className="w-3 h-3" />} />
+                <InfoRow label="Email" value={member.email} icon={<Mail className="w-3 h-3" />} />
+                <InfoRow label="Dirección" value={member.address} icon={<MapPin className="w-3 h-3" />} />
+            </div>
+        </details>
     );
 }
 
 export function StudentVitalsPanel({ student }: StudentVitalsPanelProps) {
-    const hasFamilyData = student.father_info?.full_name || student.mother_info?.full_name || student.guardian_info_detailed?.full_name;
-    const hasMedicalData = student.blood_type || student.rh_factor || student.health_insurance;
-
+    const hasFamilyData = student.father_info || student.mother_info || student.guardian_info_detailed;
+    
+    // Contenedor principal con limitador de altura y scroll nativo estilizado para no empujar el footer
     return (
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-            {/* ── Ficha Académica / Personal ── */}
-            <GlassCard className="p-5 border-violet-500/10">
-                <div className="space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-400">Ficha Personal</h4>
-                    <div className="grid grid-cols-2 gap-x-6">
-                        <div>
-                            <InfoRow label="Documento" value={student.document_number} />
-                            <InfoRow label="Tipo Doc." value={student.document_type} />
-                            <InfoRow label="Género" value={student.gender} />
-                            <InfoRow label="Nació" value={student.birth_date} />
-                            <InfoRow label="Edad" value={student.age} />
+        <div className="flex flex-col gap-y-4 w-full max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar pr-2 animate-in fade-in slide-in-from-top-4 duration-500">
+            
+            {/* ── Header / Resumen ── */}
+            <GlassCard className="p-5 border-primary/20 bg-gradient-to-br from-black/80 to-primary/5">
+                <div className="flex flex-col gap-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                            <User className="w-5 h-5 text-primary" />
                         </div>
-                        <div>
-                            <InfoRow label="Teléfono" value={student.phone} />
-                            <InfoRow label="Email" value={student.email} />
-                            <InfoRow label="Dirección" value={student.address} />
-                            <InfoRow label="Barrio" value={student.neighborhood} />
+                        <div className="overflow-hidden">
+                            <h3 className="text-sm font-black text-white truncate break-words">{student.first_name} {student.last_name}</h3>
+                            <p className="text-[10px] font-bold text-primary tracking-widest uppercase truncate">{student.document_type || 'DOC'} {student.document_number || 'S/N'}</p>
                         </div>
                     </div>
-                    {(student.current_school || student.current_grade) && (
-                        <div className="pt-2 border-t border-white/5">
-                            <InfoRow label="Colegio" value={student.current_school} />
-                            <InfoRow label="Grado" value={student.current_grade} />
+                </div>
+            </GlassCard>
+
+            {/* ── Ficha Personal ── */}
+            <GlassCard className="p-5 border-violet-500/10 hover:border-violet-500/30 transition-colors">
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-4">
+                        <User className="w-4 h-4 text-violet-400" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-400">Ficha Personal</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                        <div className="space-y-1">
+                            <InfoRow label="Nació" value={formatIsoDate(student.birth_date)} icon={<CalendarDays className="w-3 h-3" />} />
+                            <InfoRow label="Edad" value={student.age ? `${student.age} Años` : null} icon={<Activity className="w-3 h-3" />} />
+                            <InfoRow label="Género" value={student.gender} icon={<User className="w-3 h-3" />} />
                         </div>
-                    )}
+                        <div className="space-y-1">
+                            <InfoRow label="Teléfono" value={student.phone} icon={<Smartphone className="w-3 h-3" />} />
+                            <InfoRow label="Email" value={student.email} icon={<Mail className="w-3 h-3" />} />
+                            <InfoRow label="Dirección" value={student.address} icon={<MapPin className="w-3 h-3" />} />
+                        </div>
+                    </div>
                 </div>
             </GlassCard>
 
             {/* ── Ficha Médica ── */}
-            {hasMedicalData && (
-                <GlassCard className="p-5 border-red-500/10">
-                    <div className="space-y-3">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400">Ficha Médica</h4>
-                        <div className="flex gap-6">
-                            {student.blood_type && (
-                                <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-red-400/50">Grupo</p>
-                                    <p className="text-2xl font-black text-red-400">{student.blood_type}</p>
-                                    {student.rh_factor && (
-                                        <p className="text-xs font-bold text-red-300">{student.rh_factor}</p>
-                                    )}
-                                </div>
+            <GlassCard className="p-5 border-cyan-500/10 hover:border-cyan-500/30 transition-colors">
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Heart className="w-4 h-4 text-cyan-400" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Ficha Médica & Aseguradora</h4>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-6">
+                        {/* Grupo Sanguíneo Badge */}
+                        <div className="px-6 py-4 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl flex flex-col items-center justify-center shrink-0 shadow-inner">
+                            <Droplets className="w-5 h-5 text-cyan-400/50 mb-1" />
+                            {student.blood_type ? (
+                                <p className="text-3xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
+                                    {student.blood_type}{student.rh_factor || ''}
+                                </p>
+                            ) : (
+                                <p className="text-xs font-semibold text-gray-500 italic mt-2">No registrado</p>
                             )}
-                            <div className="flex-1">
-                                <InfoRow label="EPS / Medicina" value={student.health_insurance} />
-                            </div>
+                        </div>
+                        
+                        {/* Datos de Salud */}
+                        <div className="flex-1 flex flex-col justify-center space-y-1">
+                            <InfoRow label="EPS / Medicina Prep." value={student.health_insurance} icon={<ShieldPlus className="w-3 h-3" />} />
                         </div>
                     </div>
-                </GlassCard>
-            )}
+                </div>
+            </GlassCard>
 
-            {/* ── Ficha Familiar ── */}
+            {/* ── Ficha Familiar (JSONB) ── */}
             {hasFamilyData && (
-                <GlassCard className="p-5 border-cyan-500/10">
+                <GlassCard className="p-5 border-pink-500/10 hover:border-pink-500/30 transition-colors">
                     <div className="space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Ficha Familiar</h4>
-                        <div className="space-y-3">
-                            <FamilyMemberCard title="Padre" member={student.father_info} color="violet" />
-                            <FamilyMemberCard title="Madre" member={student.mother_info} color="pink" />
-                            <FamilyMemberCard title="Acudiente" member={student.guardian_info_detailed} color="cyan" />
+                        <div className="flex items-center gap-2 mb-2">
+                            <Users className="w-4 h-4 text-pink-400" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-pink-400">Ficha de Acudientes</h4>
+                        </div>
+                        
+                        <div className="space-y-3 flex flex-col w-full">
+                            <FamilyMemberCard title="Información del Padre" member={student.father_info} color="violet" />
+                            <FamilyMemberCard title="Información de la Madre" member={student.mother_info} color="pink" />
+                            <FamilyMemberCard title="Acudiente Registrado" member={student.guardian_info_detailed} color="cyan" />
                         </div>
                     </div>
                 </GlassCard>
             )}
+            
+            {/* Espaciador final para evitar que el scroll corte el último elemento */}
+            <div className="h-4 w-full shrink-0"></div>
         </div>
     );
 }

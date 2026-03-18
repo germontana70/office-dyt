@@ -32,9 +32,12 @@ export const CurrentStudentSchema = z.object({
     id: z.string().uuid().optional(), // Generado por Supabase
     document_number: z.string().trim().min(3, "Documento muy corto").catch('-'), // Obligatorio y vital. Si falla, al menos pone un guión (aunque idealmente no debería fallar)
     document_type: z.string().trim().nullable().catch(null),
+    document_expedition_place: emptyToNull,
     first_name: z.string().trim().min(1, "El nombre es requerido").catch('Desconocido'),
     last_name: z.string().trim().min(1, "El apellido es requerido").catch('Desconocido'),
     email: emptyToNull,
+    // La BD usa 'phone'. 'phone_number' y 'whatsapp_number' son alias legacy del schema anterior.
+    phone: emptyToNull,
     phone_number: emptyToNull,
     whatsapp_number: emptyToNull,
     birth_date: safeDateTransform,
@@ -44,9 +47,26 @@ export const CurrentStudentSchema = z.object({
     neighborhood: emptyToNull,
     city: emptyToNull,
 
-    // Datos Familiares/Emergencia (pueden venir sucios)
+    // ─── Datos Médicos (migrados desde SIA 2.0) ───
+    // health_insurance es un STRING plano (ej: "SANITAS") — nunca JSON
+    blood_type: emptyToNull,
+    rh_factor: emptyToNull,
+    health_insurance: emptyToNull,
+
+    // ─── Datos Familiares JSONB (estructura variable, SIA 2.0 legacy) ───
+    // Se usa z.any() intencionalmente: las llaves varían entre registros migrados.
+    // El parseo estricto se hace en el componente UI con safeParseJsonb().
+    father_info: z.any().optional().nullable().default(null),
+    mother_info: z.any().optional().nullable().default(null),
+    guardian_info_detailed: z.any().optional().nullable().default(null),
+
+    // Datos Familiares/Emergencia (campos planos legacy)
     guardian_name: emptyToNull,
     guardian_phone: emptyToNull,
+
+    // Datos Académicos / Colegio
+    current_grade: emptyToNull,
+    current_school: emptyToNull,
 
     // Relacionados con la Matrícula del Semestre
     instruments: z.array(z.string()).default([]).catch([]), // Array de UUIDs o Nombres de instrumentos
@@ -87,6 +107,7 @@ export const CurrentStudentSchema = z.object({
 });
 
 export type CurrentStudent = z.infer<typeof CurrentStudentSchema>;
+
 
 
 // ==========================================
