@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { addDays, format } from 'date-fns';
+import { addDays, addMonths, format } from 'date-fns';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { initializePaymentPlan, sealPaymentPlan } from '@/app/actions/finance';
 import { syncProgramNames } from '@/app/actions/audit-finance';
-import { getGlobalSettings, getInstruments, getProgramPricesBySemester, getGroupClassesBySemester } from '@/app/actions/settings';
+import { getGlobalSettings, getInstruments, getProgramPricesBySemester, getGroupClassesBySemester, getTeachers } from '@/app/actions/settings';
 import { uploadStudentPhoto } from '@/modules/matriculas/actions/upload-student-photo';
+import { uploadPaymentEvidence } from '@/app/actions/drive';
 import Image from 'next/image';
 
 interface EnrollmentAuditCardProps {
@@ -152,16 +153,16 @@ function FloatingSelect({
     );
 }
 
-function MaskedCurrencyInput({ 
-    value, 
-    onChange, 
-    className = "", 
-    placeholder = "0" 
-}: { 
-    value: number; 
-    onChange: (val: number) => void; 
-    className?: string; 
-    placeholder?: string; 
+function MaskedCurrencyInput({
+    value,
+    onChange,
+    className = "",
+    placeholder = "0"
+}: {
+    value: number;
+    onChange: (val: number) => void;
+    className?: string;
+    placeholder?: string;
 }) {
     // Función para formatear con puntos de miles
     const formatValue = (val: number) => {
@@ -198,6 +199,85 @@ function MaskedCurrencyInput({
     );
 }
 
+function FileUploaderCell({
+    value,
+    onChange,
+    studentName,
+    semester,
+    paymentTitle
+}: {
+    value: string | null;
+    onChange: (url: string) => void;
+    studentName: string;
+    semester: string;
+    paymentTitle: string;
+}) {
+    const [isUploading, startTransition] = useTransition();
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        startTransition(async () => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('studentName', studentName);
+            formData.append('semester', semester);
+            formData.append('paymentTitle', paymentTitle);
+
+            const result = await uploadPaymentEvidence(formData);
+            if (result?.success && result.url) {
+                onChange(result.url);
+            } else {
+                alert('Error subiendo archivo: ' + result?.error);
+            }
+        });
+    };
+
+    if (value) {
+        return (
+            <a href={value} target="_blank" rel="noopener noreferrer" className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 flex items-center justify-center gap-1 rounded uppercase tracking-tighter hover:bg-emerald-500/30 transition-colors w-full" title="Ver Soporte">
+                Soporte
+            </a>
+        );
+    }
+
+    return (
+        <div className="relative">
+            {isUploading ? (
+                <div className="flex items-center justify-center gap-2 text-[10px] font-black text-primary animate-pulse border border-primary/20 bg-primary/10 rounded px-2 py-1">
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    UP...
+                </div>
+            ) : (
+                <label className="cursor-pointer text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-1 rounded w-full flex items-center justify-center gap-1 uppercase tracking-tighter hover:bg-primary/30 transition-colors">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Subir
+                    <input type="file" className="hidden" onChange={handleUpload} accept="application/pdf,image/*" />
+                </label>
+            )}
+        </div>
+    );
+}
+
+const ROOM_OPTIONS = [
+    'SALÓN 201', 'SALÓN 202', 'SALÓN 203A', 'SALÓN 203B', 'SALÓN 204A -M.A', 'SALÓN 204B- J.P', 'SALÓN 205-A', 'SALÓN 205-B', 'SALÓN 205-C', 'SALÓN 206', 'SALÓN 207', 'SALÓN 208', 'SALÓN 209', 'MASTER GERMÁN', 'CLASES VIRTUALES - SALA 1 - Dones y Talentos', 'Clases canceladas'
+];
+const DURATION_OPTIONS = ['30 min', '45 min', '60 min', '120 min'];
+const DAY_OPTIONS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+const isIndividualProgram = (name: string) => {
+    const lower = String(name || '').toLowerCase();
+    return lower.includes('semestre personalizado') || lower.includes('curso libre');
+};
+
+const requiresInstrumentConfig = (name: string) => {
+    const lower = String(name || '').toLowerCase();
+    return lower.includes('semestre personalizado') || lower.includes('curso libre - instrumento');
+};
+
 export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     if (!enrollment) return null;
 
@@ -205,6 +285,50 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const [isUploading, startUploadTransition] = useTransition();
     const [isDragging, setIsDragging] = useState(false);
     const [currentPhotoUrl, setCurrentPhotoUrl] = useState(enrollment.student?.photo_url);
+
+    const handleUpdateProgramSchedule = (progId: string, scheduleIndex: number, field: string, value: string) => {
+        setSelectedPrograms(prev => prev.map(prog => {
+            if (prog.id === progId) {
+                const schedules = [...(prog.schedules || [])];
+                if (schedules[scheduleIndex]) {
+                    schedules[scheduleIndex] = { ...schedules[scheduleIndex], [field]: value };
+                }
+                return { ...prog, schedules };
+            }
+            return prog;
+        }));
+    };
+
+    const handleAddProgramSchedule = (progId: string) => {
+        setSelectedPrograms(prev => prev.map(prog => {
+            if (prog.id === progId) {
+                const schedules = [...(prog.schedules || [])];
+                schedules.push({ id: `sch-${Date.now()}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' });
+                return { ...prog, schedules };
+            }
+            return prog;
+        }));
+    };
+
+    const handleRemoveProgramSchedule = (progId: string, scheduleIndex: number) => {
+        setSelectedPrograms(prev => prev.map(prog => {
+            if (prog.id === progId) {
+                const schedules = [...(prog.schedules || [])];
+                schedules.splice(scheduleIndex, 1);
+                return { ...prog, schedules };
+            }
+            return prog;
+        }));
+    };
+
+    const handleUpdateProgramObservation = (progId: string, value: string) => {
+        setSelectedPrograms(prev => prev.map(prog => {
+            if (prog.id === progId) {
+                return { ...prog, observations: value };
+            }
+            return prog;
+        }));
+    };
 
     useEffect(() => {
         setCurrentPhotoUrl(enrollment.student?.photo_url);
@@ -238,7 +362,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             alert('⚠️ El archivo es muy pesado. El límite es de 1MB para descarga rápida.');
             return;
         }
-        
+
         startUploadTransition(async () => {
             const formData = new FormData();
             formData.append('photo', file);
@@ -266,7 +390,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         e.preventDefault();
         setIsDragging(false);
         if (isUploading) return;
-        
+
         const file = e.dataTransfer.files?.[0];
         if (file) await uploadPhoto(file);
     };
@@ -302,13 +426,17 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     };
 
     const [instruments, setInstruments] = useState<any[]>([]);
+    const [groupClasses, setGroupClasses] = useState<any[]>([]);
+    const [teachers, setTeachers] = useState<any[]>([]);
+
     const [instrumentSelections, setInstrumentSelections] = useState<Record<string, string>>({});
+    const [groupClassSelections, setGroupClassSelections] = useState<Record<string, string>>({});
+    const [teacherSelections, setTeacherSelections] = useState<Record<string, string>>({});
+
     const [globalFees, setGlobalFees] = useState<{ enrollment_fee: number; tshirt_fee: number }>({
         enrollment_fee: 0,
         tshirt_fee: 0
     });
-    const [groupClasses, setGroupClasses] = useState<any[]>([]);
-    const [groupClassSelections, setGroupClassSelections] = useState<Record<string, string>>({});
     const [paymentPlanError, setPaymentPlanError] = useState<string | null>(null);
 
     const [includeEnrollmentFee, setIncludeEnrollmentFee] = useState(true);
@@ -331,6 +459,14 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const [programStatus, setProgramStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
     const [programError, setProgramError] = useState<string | null>(null);
     const [programRetryKey, setProgramRetryKey] = useState(0);
+    const [selectedPrograms, setSelectedPrograms] = useState<any[]>(() => {
+        return (enrollment?.programs || []).map((prog: any) => ({
+            ...prog,
+            schedules: prog.schedules?.length ? prog.schedules : (prog.day_1 ? [{ id: `sch-init-${prog.id}`, day: prog.day_1, startTime: prog.time_1 || '15:00', duration: '60 min', room: 'SALÓN 201' }] : [{ id: `sch-init-${prog.id}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }]),
+            observations: prog.observations || ''
+        }));
+    });
+    const [deletedPrograms, setDeletedPrograms] = useState<Set<string>>(new Set());
     const programRequestIdRef = useRef(0);
 
     useEffect(() => {
@@ -347,7 +483,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             }
         });
     }, [enrollment?.id]);
-    
+
     // Sincronizar estado con el plan de pago cargado
     useEffect(() => {
         if (paymentPlan) {
@@ -371,26 +507,38 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     useEffect(() => {
         startTransition(async () => {
-            const list = await getInstruments();
-            setInstruments(list || []);
+            const [instList, groupList, teachersList] = await Promise.all([
+                getInstruments(),
+                getGroupClassesBySemester(enrollment?.semester),
+                getTeachers()
+            ]);
+            setInstruments(instList);
+            setGroupClasses(groupList);
+            setTeachers(teachersList);
         });
-    }, []);
+    }, [enrollment?.semester]);
 
     useEffect(() => {
-        if (!enrollment?.programs) return;
-        const nextSelections: Record<string, string> = {};
-        const nextGroupSelections: Record<string, string> = {};
-        for (const program of enrollment.programs) {
-            if (program?.instrument_id) {
+        if (!selectedPrograms) return;
+        const nextSelections: Record<string, string> = { ...programSelection };
+        const nextGroupSelections: Record<string, string> = { ...groupClassSelections };
+        const nextTeacherSelections: Record<string, string> = { ...teacherSelections };
+        for (const program of selectedPrograms) {
+            if (program?.instrument_id && !nextSelections[program.id]) {
                 nextSelections[program.id] = program.instrument_id;
             }
-            if (program?.group_class_id) {
+            if (program?.group_class_id && !nextGroupSelections[program.id]) {
                 nextGroupSelections[program.id] = program.group_class_id;
+            }
+            if (program?.teacher_id && !nextTeacherSelections[program.id]) {
+                nextTeacherSelections[program.id] = program.teacher_id;
             }
         }
         setInstrumentSelections(nextSelections);
         setGroupClassSelections(nextGroupSelections);
-    }, [enrollment?.programs]);
+        setTeacherSelections(nextTeacherSelections);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedPrograms, groupClasses, teachers]);
 
     const normalizeProgramKey = (value: string) =>
         String(value || '')
@@ -497,18 +645,18 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     }, [enrollment?.semester, programRetryKey]);
 
     useEffect(() => {
-        if (!enrollment?.programs || programOptions.length === 0) return;
+        if (!selectedPrograms || programOptions.length === 0) return;
         setProgramSelection((prev) => {
             const next = { ...prev };
-            for (const program of enrollment.programs) {
+            for (const program of selectedPrograms) {
                 const key = normalizeProgramKey(program.program_name || '');
-                if (!next[program.id]) {
+                if (!next[program.id] && key) {
                     next[program.id] = key;
                 }
             }
             return next;
         });
-    }, [enrollment?.programs, programOptions.length]);
+    }, [selectedPrograms, programOptions.length]);
 
     useEffect(() => {
         if (!enrollment?.semester) return;
@@ -520,8 +668,6 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     tshirt_fee: Number(settings.tshirt_fee || 0)
                 });
             }
-            const classes = await getGroupClassesBySemester(enrollment.semester);
-            setGroupClasses(classes || []);
         });
     }, [enrollment?.semester]);
 
@@ -575,8 +721,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const planType = installmentCount === 1 ? 'contado' : 'cuotas';
 
     const baseCashAmount = (() => {
-        if (!enrollment?.programs) return Number(paymentPlan?.base_amount || 0);
-        return enrollment.programs.reduce((sum: number, program: any) => {
+        if (!selectedPrograms) return Number(paymentPlan?.base_amount || 0);
+        return selectedPrograms.reduce((sum: number, program: any) => {
             const selectedKey = programSelection[program.id];
             const key = selectedKey || normalizeProgramKey(program.program_name || '');
             const price = programPrices[key]?.cash || 0;
@@ -585,14 +731,14 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     })();
 
     const programBaseAmount = (() => {
-        if (!enrollment?.programs) return baseCashAmount;
+        if (!selectedPrograms) return baseCashAmount;
         const discountFactor = 1 - (discountPercentage / 100);
 
-        return enrollment.programs.reduce((sum: number, program: any) => {
+        return selectedPrograms.reduce((sum: number, program: any) => {
             const selectedKey = programSelection[program.id];
             const key = selectedKey || normalizeProgramKey(program.program_name || '');
             const pricing = programPrices[key];
-            
+
             const cash = pricing?.cash || 0;
             // ✅ DIRECTIVA: El % de incremento viene de la Bóveda para ESTE programa específico.
             // Si no hay dato (pricing no encontrado), usar 0 es más seguro que asumir un % arbitrario.
@@ -603,7 +749,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             // Misión 3: Motor de Beca
             // 1. Aplicar descuento al contado
             const discountedCash = cash * discountFactor;
-            
+
             let price = discountedCash;
             if (installmentCount > 1) {
                 // 2. Aplicar incremento sobre el valor con beca
@@ -620,20 +766,20 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     })();
 
     const calculatedTotalFinanced = (() => {
-        if (!enrollment?.programs) return 0;
+        if (!selectedPrograms) return 0;
 
-        const normalizeStr = (str: string) => 
+        const normalizeStr = (str: string) =>
             String(str || "")
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
                 .trim()
                 .toLowerCase();
 
-        return enrollment.programs.reduce((sum: number, program: any) => {
+        return selectedPrograms.reduce((sum: number, program: any) => {
             const rawName = programSelection[program.id] || program.program_name || '';
             const key = normalizeStr(rawName);
             const pricing = programPrices[key];
-            
+
             if (!pricing) return sum;
 
             const cashPrice = pricing.cash || 0;
@@ -647,7 +793,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
                     financedAmount = roundup10k(calculated);
                 } else {
-                    financedAmount = cashPrice; 
+                    financedAmount = cashPrice;
                 }
             }
 
@@ -657,7 +803,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     const scholarshipAmount = (() => {
         // Calcular cuánto se descontó en total comparado con el full cash
-        const fullCash = enrollment.programs.reduce((sum: number, p: any) => {
+        const fullCash = selectedPrograms.reduce((sum: number, p: any) => {
             const key = programSelection[p.id] || normalizeProgramKey(p.program_name || '');
             return sum + (programPrices[key]?.cash || 0);
         }, 0);
@@ -671,18 +817,18 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     const installmentSchedule = (() => {
         if (installmentCount === 1) return [];
-        
+
         // Misión 1: Solo el programa se financia
         const n = installmentCount;
         const academicBase = roundup10k(programBaseAmount / n);
-        
+
         return Array.from({ length: n }, (_, idx) => {
             let amount = academicBase;
             if (idx === n - 1) {
                 // Última cuota es el residuo académico
                 amount = programBaseAmount - (academicBase * (n - 1));
             }
-            
+
             // Misión 2: Los cargos de contado van en la Cuota 1
             if (idx === 0) {
                 amount += enrollmentFeeValue + uniformFeeValue;
@@ -690,7 +836,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
             return {
                 amount,
-                dueDate: format(addDays(new Date(), 30 * (idx + 1)), 'yyyy-MM-dd')
+                dueDate: format(addMonths(new Date(), idx + 1), 'yyyy-MM-dd')
             };
         });
     })();
@@ -723,59 +869,80 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         }
     };
 
-    // Misión 1 & 2: Proyección de Cuotas con Separación de Conceptos
+    // Misión 1 & 2: Proyección de Cuotas con Separación de Conceptos MULTI-PROGRAMA
     useEffect(() => {
+        if (!selectedPrograms) return;
         const n = planType === 'contado' ? 1 : installments;
-        
-        const academicBase = n > 1 ? roundup10k(programBaseAmount / n) : programBaseAmount;
         const baseDate = startDate ? new Date(startDate) : new Date();
 
-        const newDetails = Array.from({ length: n }).map((_, i) => {
-            const existing = installmentsDetails[i];
-            const projectedDate = addDays(baseDate, i * 30);
-            
-            // Lógica de Cuota
-            let academicPart = academicBase;
-            if (i === n - 1 && n > 1) {
-                academicPart = programBaseAmount - (academicBase * (n - 1));
-            }
+        setInstallmentsDetails((prevDetails) => {
+            let isFirstProgram = true;
+            const newDetails: any[] = [];
 
-            let amount_due = academicPart;
-            let concept = 'Cuota Programa';
-            
-            // Metadata de desglose para el POS
-            const breakdown: any[] = [{ label: 'Cuota Académica', value: academicPart }];
+            selectedPrograms.forEach((prog: any) => {
+                const key = programSelection[prog.id] || normalizeProgramKey(prog.program_name || '');
+                const pricing = programPrices[key];
+                const cash = pricing?.cash || 0;
+                const increment = pricing?.increment || 0;
+                const discountFactor = 1 - ((discountPercentage || 0) / 100);
 
-            // Inyectar cargos de contado en la cuota 1
-            if (i === 0) {
-                if (enrollmentFeeValue > 0) {
-                    amount_due += enrollmentFeeValue;
-                    breakdown.push({ label: 'Inscripción', value: enrollmentFeeValue });
+                const discountedCash = cash * discountFactor;
+
+                let programAmount = discountedCash;
+                if (n > 1) {
+                    programAmount = roundup10k(discountedCash * (1 + (increment / 100)));
+                } else {
+                    programAmount = Math.ceil(discountedCash / 1000) * 1000;
                 }
-                if (uniformFeeValue > 0) {
-                    amount_due += uniformFeeValue;
-                    breakdown.push({ label: 'Camiseta', value: uniformFeeValue });
+
+                const academicBase = n > 1 ? roundup10k(programAmount / n) : programAmount;
+
+                for (let i = 0; i < n; i++) {
+                    const existing = prevDetails.find((d: any) => d.program_id === prog.id && d.installment_number === i + 1) || {};
+                    const projectedDate = addMonths(baseDate, i);
+
+                    let academicPart = academicBase;
+                    if (i === n - 1 && n > 1) {
+                        academicPart = programAmount - (academicBase * (n - 1));
+                    }
+
+                    let amount_due = academicPart;
+                    let concept = 'Cuota Programa';
+                    const breakdown: any[] = [{ label: 'Cuota Académica', value: academicPart }];
+
+                    if (i === 0 && isFirstProgram) {
+                        if (enrollmentFeeValue > 0) {
+                            amount_due += enrollmentFeeValue;
+                            breakdown.push({ label: 'Inscripción', value: enrollmentFeeValue });
+                        }
+                        if (uniformFeeValue > 0) {
+                            amount_due += uniformFeeValue;
+                            breakdown.push({ label: 'Camiseta', value: uniformFeeValue });
+                        }
+                        if (enrollmentFeeValue > 0 || uniformFeeValue > 0) {
+                            concept += ' + Cargos Administrativos';
+                        }
+                    }
+
+                    newDetails.push({
+                        program_id: prog.id,
+                        installment_number: i + 1,
+                        projected_date: format(projectedDate, 'yyyy-MM-dd'),
+                        amount_due,
+                        amount_paid: existing.amount_paid || 0,
+                        payment_date: existing.payment_date || null,
+                        reference: existing.reference || '',
+                        entity: existing.entity || '',
+                        concept,
+                        evidence_url: existing.evidence_url || null,
+                        breakdown
+                    });
                 }
-                if (enrollmentFeeValue > 0 || uniformFeeValue > 0) {
-                    concept += ' + Cargos Administrativos';
-                }
-            }
-            
-            return {
-                installment_number: i + 1,
-                projected_date: format(projectedDate, 'yyyy-MM-dd'),
-                amount_due,
-                amount_paid: existing?.amount_paid || 0,
-                payment_date: existing?.payment_date || null,
-                reference: existing?.reference || '',
-                entity: existing?.entity || '',
-                concept,
-                breakdown // Para vista POS
-            };
+                isFirstProgram = false;
+            });
+            return newDetails;
         });
-
-        setInstallmentsDetails(newDetails);
-    }, [installments, planType, programBaseAmount, enrollmentFeeValue, uniformFeeValue, startDate, discountPercentage]);
+    }, [installments, planType, selectedPrograms, programSelection, programPrices, discountPercentage, enrollmentFeeValue, uniformFeeValue, startDate]);
 
     // Sincronizar con plan existente si viene de la DB
     useEffect(() => {
@@ -813,12 +980,29 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             instrument_id
         }));
         const programUpdates = Object.entries(programSelection)
-            .map(([program_id, program_key]) => ({
-                program_id,
-                program_name: programLabelMap[program_key] || program_key,
-                group_class_id: groupClassSelections[program_id] || null
-            }))
+            .map(([program_id, program_key]) => {
+                const progObj = selectedPrograms.find(p => p.id === program_id);
+                return {
+                    program_id,
+                    program_name: programLabelMap[program_key] || program_key,
+                    group_class_id: groupClassSelections[program_id] || null,
+                    teacher_id: teacherSelections[program_id] || null,
+                    schedules: progObj?.schedules || [],
+                    observations: progObj?.observations || '',
+                    isNew: program_id.startsWith('new-')
+                };
+            })
             .filter((entry) => entry.program_name && entry.program_name.trim().length > 0);
+
+        deletedPrograms.forEach(id => {
+            programUpdates.push({
+                program_id: id,
+                program_name: 'deleted',
+                group_class_id: null,
+                isNew: false,
+                isDeleted: true
+            } as any);
+        });
 
         const result = await sealPaymentPlan({
             payment_plan_id: paymentPlan.id,
@@ -827,9 +1011,9 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             uniform_fee: uniformFeeValue,
             total_amount: totalAmount,
             plan_type: planType,
-            initial_payment: Number(initialPayment || 0),
-            payment_method: paymentMethod,
-            reference_code: referenceCode,
+            initial_payment: 0,
+            payment_method: 'N/A',
+            reference_code: '',
             notes,
             start_date: startDate,
             installments_details: installmentsDetails,
@@ -855,7 +1039,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 <div className="relative z-10 space-y-8">
                     <div className="flex justify-between items-start">
                         <div className="flex gap-6 items-center">
-                            <div 
+                            <div
                                 className={`relative group/photo cursor-pointer transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
                                 onClick={handlePhotoClick}
                                 onDragOver={onDragOver}
@@ -870,7 +1054,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     accept="image/jpeg,image/png,image/webp"
                                     disabled={isUploading}
                                 />
-                                
+
                                 <div className={`relative w-32 h-32 rounded-full border-2 transition-all duration-500 overflow-hidden ${isDragging || (isUploading) ? 'border-primary ring-4 ring-primary/20 shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]' : 'border-primary/40 ring-2 ring-primary/10 shadow-2xl shadow-black/60'}`}>
                                     {isUploading && (
                                         <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center">
@@ -878,10 +1062,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                             <span className="text-[8px] font-black uppercase text-primary tracking-tighter">Subiendo</span>
                                         </div>
                                     )}
-                                    
+
                                     {currentPhotoUrl ? (
-                                        <Image 
-                                            src={currentPhotoUrl} 
+                                        <Image
+                                            src={currentPhotoUrl}
                                             alt={enrollment.student.first_name}
                                             width={128}
                                             height={128}
@@ -921,11 +1105,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                 </h3>
                                 <p className="text-3xl font-black tracking-tighter text-white uppercase italic flex items-center gap-3">
                                     {enrollment.student.first_name} {enrollment.student.last_name}
-                                    <span className={`text-base not-italic font-black px-3 py-1 rounded-lg ${
-                                        isMinor
+                                    <span className={`text-base not-italic font-black px-3 py-1 rounded-lg ${isMinor
                                             ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30'
                                             : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/40'
-                                    }`}>
+                                        }`}>
                                         ({ageBadgeLabel})
                                     </span>
                                 </p>
@@ -935,11 +1118,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                             </div>
                         </div>
                         <div
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                enrollment.status === 'Activa'
+                            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${enrollment.status === 'Activa'
                                     ? 'bg-green-500/10 border-green-500/20 text-green-400'
                                     : 'bg-white/5 border-white/10 text-white/40'
-                            }`}
+                                }`}
                         >
                             {enrollment.status}
                         </div>
@@ -965,29 +1147,47 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {(!enrollment.programs || enrollment.programs.length === 0) && (
-                                <div className="col-span-full p-6 bg-slate-50 dark:bg-black/40 backdrop-blur-md border border-amber-500/20 rounded-2xl flex flex-col items-center justify-center gap-3 text-center">
+                        <div className="grid grid-cols-1 gap-6">
+                            {(!selectedPrograms || selectedPrograms.length === 0) && (
+                                <div className="col-span-1 p-6 bg-slate-50 dark:bg-black/40 backdrop-blur-md border border-amber-500/20 rounded-2xl flex flex-col items-center justify-center gap-3 text-center">
                                     <svg className="w-10 h-10 text-amber-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                                     </svg>
                                     <p className="text-[11px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-300">
-                                        Alumno sincronizado sin programa asignado
+                                        Alumno sin programa asignado
                                     </p>
                                     <p className="text-[10px] text-slate-500 dark:text-white/40 max-w-md">
-                                        Este estudiante fue importado desde Google Sheets. Seleccione un estudiante nuevamente para que el sistema genere su slot de programa automáticamente.
+                                        Seleccione "Añadir Programa Adicional" para configurar los planes académicos de este estudiante.
                                     </p>
                                 </div>
                             )}
-                            {enrollment.programs &&
-                                enrollment.programs.map((prog: any) => (
+                            {selectedPrograms &&
+                                selectedPrograms.map((prog: any, progIdx: number) => (
                                     <div
                                         key={prog.id}
-                                        className="p-4 glass-panel border border-white/5 rounded-2xl space-y-3 group/item hover:border-primary/30 transition-colors overflow-visible relative z-10 shadow-lg shadow-black/40"
+                                        className="p-4 glass-panel border border-white/5 rounded-2xl space-y-3 group/item hover:border-primary/30 transition-colors overflow-visible relative z-10 shadow-lg shadow-black/40 w-full"
                                     >
-                                        {getProgramCategory(programLabelMap[programSelection[prog.id]] || prog.program_name || '') === 'group' && (
+                                        {progIdx > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    setDeletedPrograms(prev => new Set(prev).add(prog.id));
+                                                    setSelectedPrograms(prev => prev.filter(p => p.id !== prog.id));
+                                                }}
+                                                className="absolute top-4 right-4 text-red-500/50 hover:text-red-500 transition-colors bg-red-500/10 p-1.5 rounded-full z-20"
+                                                title="Eliminar Programa"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                        {isIndividualProgram(programLabelMap[programSelection[prog.id]] || prog.program_name || '') ? (
+                                            <div className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[9px] font-black uppercase tracking-widest text-cyan-500 dark:text-cyan-300 w-fit">
+                                                Modalidad Individual (Personalizada)
+                                            </div>
+                                        ) : (
                                             <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300 w-fit">
-                                                Categoria Grupal (sin maestro)
+                                                Categoria Grupal (sin asignación individual libre)
                                             </div>
                                         )}
                                         <div className="flex flex-col gap-2">
@@ -1019,97 +1219,153 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                             })()}
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">
-                                                    Instrumento
-                                                </p>
-                                                <p className="text-[11px] font-bold text-slate-700 dark:text-white/70 italic">
-                                                    {getProgramCategory(programLabelMap[programSelection[prog.id]] || prog.program_name || '') === 'group'
-                                                        ? 'No requerido'
-                                                        : prog.instrument?.name || 'No definido'}
-                                                </p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">
-                                                    Maestro
-                                                </p>
-                                                <p className="text-[11px] font-bold text-slate-700 dark:text-white/70 italic">
-                                                    {getProgramCategory(programLabelMap[programSelection[prog.id]] || prog.program_name || '') === 'group'
-                                                        ? 'No requerido'
-                                                        : prog.teacher?.name || 'No definido'}
-                                                </p>
-                                            </div>
-                                        </div>
+                                        {isIndividualProgram(programLabelMap[programSelection[prog.id]] || prog.program_name || '') ? (
+                                            <div className="space-y-6 pt-4 border-t border-white/5">
+                                                <div className={`grid grid-cols-1 ${requiresInstrumentConfig(programLabelMap[programSelection[prog.id]] || prog.program_name || '') ? 'md:grid-cols-2' : ''} gap-4`}>
+                                                    {requiresInstrumentConfig(programLabelMap[programSelection[prog.id]] || prog.program_name || '') && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">
+                                                                Instrumento asignado
+                                                            </p>
+                                                            <FloatingSelect
+                                                                value={instrumentSelections[prog.id] || ''}
+                                                                options={instruments.map((instrument) => ({
+                                                                    key: instrument.id,
+                                                                    label: instrument.name
+                                                                }))}
+                                                                onChange={(value) =>
+                                                                    setInstrumentSelections((prev) => ({
+                                                                        ...prev,
+                                                                        [prog.id]: value
+                                                                    }))
+                                                                }
+                                                                placeholder="Seleccionar instrumento"
+                                                                loadingLabel="Cargando instrumentos..."
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div className="space-y-2">
+                                                        <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">
+                                                            Maestro Asignado
+                                                        </p>
+                                                        <FloatingSelect
+                                                            value={teacherSelections[prog.id] || ''}
+                                                            options={teachers.map((t) => ({
+                                                                key: t.id,
+                                                                label: t.name
+                                                            }))}
+                                                            onChange={(value) =>
+                                                                setTeacherSelections((prev) => ({
+                                                                    ...prev,
+                                                                    [prog.id]: value
+                                                                }))
+                                                            }
+                                                            placeholder="Vincular maestro..."
+                                                            loadingLabel="Cargando..."
+                                                        />
+                                                    </div>
+                                                </div>
 
-                                        {programNeedsInstrument(
-                                            String(programSelection[prog.id] || prog.program_name || '')
-                                        ) && (
-                                            <div className="space-y-2">
-                                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">
-                                                    Instrumento asignado
-                                                </p>
-                                                <FloatingSelect
-                                                    value={instrumentSelections[prog.id] || ''}
-                                                    options={instruments.map((instrument) => ({
-                                                        key: instrument.id,
-                                                        label: instrument.name
-                                                    }))}
-                                                    onChange={(value) =>
-                                                        setInstrumentSelections((prev) => ({
-                                                            ...prev,
-                                                            [prog.id]: value
-                                                        }))
-                                                    }
-                                                    placeholder="Seleccionar instrumento"
-                                                    loadingLabel="Cargando instrumentos..."
-                                                />
+                                                <div className="space-y-4">
+                                                    <h5 className="text-[10px] font-black uppercase text-cyan-400 tracking-widest flex items-center gap-2">
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        Horario de Clases
+                                                    </h5>
+                                                    <div className="space-y-3">
+                                                        {(prog.schedules || []).map((sch: any, sIdx: number) => (
+                                                            <div key={sch.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 border border-white/5 bg-black/40 p-3 rounded-xl items-end relative shadow-inner">
+                                                                {sIdx > 0 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveProgramSchedule(prog.id, sIdx)}
+                                                                        className="absolute -top-2 -right-2 bg-red-500/20 text-red-500 rounded-full p-1 border border-red-500/30 hover:bg-red-500 hover:text-white transition-colors"
+                                                                    >
+                                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                    </button>
+                                                                )}
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[8px] uppercase tracking-widest text-white/40 font-black">Día</p>
+                                                                    <select value={sch.day} onChange={e => handleUpdateProgramSchedule(prog.id, sIdx, 'day', e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-[11px] text-white focus:outline-none focus:border-cyan-500 font-bold uppercase">
+                                                                        {DAY_OPTIONS.map(d => <option key={d} value={d} className="bg-[#0a0a0a]">{d}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[8px] uppercase tracking-widest text-white/40 font-black">Hora (Inicio)</p>
+                                                                    <input type="time" value={sch.startTime} onChange={e => handleUpdateProgramSchedule(prog.id, sIdx, 'startTime', e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-cyan-500 font-bold" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[8px] uppercase tracking-widest text-white/40 font-black">Duración</p>
+                                                                    <select value={sch.duration} onChange={e => handleUpdateProgramSchedule(prog.id, sIdx, 'duration', e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-[11px] text-white focus:outline-none focus:border-cyan-500 font-bold uppercase">
+                                                                        {DURATION_OPTIONS.map(d => <option key={d} value={d} className="bg-[#0a0a0a]">{d}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <div className="space-y-1 md:col-span-2">
+                                                                    <p className="text-[8px] uppercase tracking-widest text-white/40 font-black">Salón</p>
+                                                                    <select value={sch.room} onChange={e => handleUpdateProgramSchedule(prog.id, sIdx, 'room', e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-[11px] text-white focus:outline-none focus:border-cyan-500 font-bold uppercase">
+                                                                        {ROOM_OPTIONS.map(r => <option key={r} value={r} className="bg-[#0a0a0a]">{r}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            onClick={() => handleAddProgramSchedule(prog.id)}
+                                                            className="text-[10px] font-black uppercase text-cyan-400 border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 rounded-xl hover:bg-cyan-400/20 transition-colors w-full tracking-widest"
+                                                        >
+                                                            + Añadir Día Adicional
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <h5 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Observaciones de Programación</h5>
+                                                    <textarea
+                                                        value={prog.observations}
+                                                        onChange={e => handleUpdateProgramObservation(prog.id, e.target.value)}
+                                                        placeholder="Instrucciones especiales para el maestro, consideraciones..."
+                                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-primary font-mono min-h-[80px]"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                                <div className="space-y-2">
+                                                    <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">
+                                                        Clase Grupal Existente
+                                                    </p>
+                                                    <FloatingSelect
+                                                        value={groupClassSelections[prog.id] || ''}
+                                                        options={groupClasses.map((cls) => ({
+                                                            key: cls.id,
+                                                            label: `${cls.name} - ${cls.schedule_day} ${cls.schedule_time} (${cls.teacher_name || 'Sin maestro'})`
+                                                        }))}
+                                                        onChange={(value) =>
+                                                            setGroupClassSelections((prev) => ({
+                                                                ...prev,
+                                                                [prog.id]: value
+                                                            }))
+                                                        }
+                                                        placeholder="Seleccionar clase grupal"
+                                                        loadingLabel="Cargando clases grupales..."
+                                                    />
+                                                </div>
                                             </div>
                                         )}
 
-                                        {getProgramCategory(programLabelMap[programSelection[prog.id]] || prog.program_name || '') === 'group' && (
-                                            <div className="space-y-2">
-                                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">
-                                                    Clase Grupal Existente
-                                                </p>
-                                                <FloatingSelect
-                                                    value={groupClassSelections[prog.id] || ''}
-                                                    options={groupClasses.map((cls) => ({
-                                                        key: cls.id,
-                                                        label: `${cls.name} - ${cls.schedule_day} ${cls.schedule_time} (${cls.teacher_name || 'Sin maestro'})`
-                                                    }))}
-                                                    onChange={(value) =>
-                                                        setGroupClassSelections((prev) => ({
-                                                            ...prev,
-                                                            [prog.id]: value
-                                                        }))
-                                                    }
-                                                    placeholder="Seleccionar clase grupal"
-                                                    loadingLabel="Cargando clases grupales..."
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="pt-2 border-t border-white/5 flex items-center gap-2">
-                                            <svg
-                                                className="w-3.5 h-3.5 text-primary/50"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                            <p className="text-[10px] font-mono text-white/40">
-                                                {prog.day_1 || 'Sin dia'} @ {prog.time_1 || 'Sin hora'}
-                                            </p>
-                                        </div>
                                     </div>
                                 ))}
+
+                            {selectedPrograms && selectedPrograms.length < 8 && (
+                                <button
+                                    onClick={() => setSelectedPrograms(prev => [...prev, { id: `new-${Date.now()}`, program_name: '', schedules: [{ id: `sch-${Date.now()}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }], observations: '' }])}
+                                    className="w-full py-4 rounded-xl border-2 border-dashed border-primary/40 bg-primary/10 text-primary font-black uppercase tracking-widest hover:bg-primary/20 hover:border-primary/80 transition-all flex items-center justify-center gap-2 mt-2 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Añadir Programa Adicional
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -1155,44 +1411,44 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                 <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
                                     Numero de Cuotas
                                 </label>
-                                    <select
-                                        value={installmentCount}
-                                        onChange={(e) => setInstallments(Number(e.target.value))}
-                                        className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
-                                    >
-                                        {[1, 2, 3, 4, 5, 6].map((n) => (
-                                            <option key={n} value={n}>
-                                                {n} {n === 1 ? '(Contado)' : 'Cuotas'}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <select
+                                    value={installmentCount}
+                                    onChange={(e) => setInstallments(Number(e.target.value))}
+                                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
+                                >
+                                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                                        <option key={n} value={n}>
+                                            {n} {n === 1 ? '(Contado)' : 'Cuotas'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                                <div className="space-y-3 pt-2">
-                                    <div className="flex justify-between items-center">
-                                        <label className="text-[10px] font-black uppercase text-primary tracking-widest">
-                                            Beca / Descuento Hum.
-                                        </label>
-                                        <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black">
-                                            {discountPercentage}%
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        step="5"
-                                        value={discountPercentage}
-                                        onChange={(e) => setDiscountPercentage(Number(e.target.value))}
-                                        className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-primary"
-                                    />
-                                    <div className="flex justify-between text-[8px] text-white/20 uppercase font-black">
-                                        <span>0%</span>
-                                        <span>Beneficio Social</span>
-                                        <span>100%</span>
-                                    </div>
+                            <div className="space-y-3 pt-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-black uppercase text-primary tracking-widest">
+                                        Beca / Descuento Hum.
+                                    </label>
+                                    <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black">
+                                        {discountPercentage}%
+                                    </span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="5"
+                                    value={discountPercentage}
+                                    onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-primary"
+                                />
+                                <div className="flex justify-between text-[8px] text-white/20 uppercase font-black">
+                                    <span>0%</span>
+                                    <span>Beneficio Social</span>
+                                    <span>100%</span>
                                 </div>
                             </div>
+                        </div>
 
                         <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden border border-white/5 shadow-xl">
                             <h4 className="text-[10px] font-black uppercase text-slate-500 dark:text-white/30 tracking-widest flex items-center gap-2">
@@ -1221,137 +1477,102 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                             </div>
                         </div>
 
-                        <div className="p-4 bg-black/40 backdrop-blur-md border border-white/5 rounded-2xl space-y-4 lg:col-span-2">
-                            <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                Cronograma de Pagos y Recaudos
-                            </h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-[11px] text-white/70 border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-primary/20 uppercase text-[12px] font-black tracking-[0.15em] text-white/50">
-                                            <th className="p-3 text-left">#</th>
-                                            <th className="p-3 text-left">Vencimiento</th>
-                                            <th className="p-3 text-left">Valor Cuota</th>
-                                            <th className="p-3 text-left">Valor Pagado</th>
-                                            <th className="p-3 text-left">Referencia / Detalle</th>
-                                            <th className="p-3 text-left">Fecha Real</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {installmentsDetails.map((inst, idx) => (
-                                            <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                <td className="p-3 font-black">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm text-white">{idx + 1}</span>
-                                                        {inst.concept && (
-                                                            <span className="text-[9px] text-primary/60 uppercase font-black tracking-widest truncate max-w-[80px]">
-                                                                {inst.concept}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-3 text-[13px] text-white/80 font-bold">{inst.projected_date}</td>
-                                                <td className="p-3 font-mono">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-white text-[1.15rem] font-black tracking-tight">{formatCurrency(inst.amount_due)}</span>
-                                                        {idx === 0 && (inst.breakdown?.length > 1) && (
-                                                            <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2 bg-white/5 p-2 rounded-lg">
-                                                                {inst.breakdown.map((b: any, bi: number) => (
-                                                                    <div key={bi} className="flex justify-between text-[11px] uppercase font-bold text-white/60 leading-relaxed">
-                                                                        <span className="opacity-60">{b.label}</span>
-                                                                        <span className="text-white font-mono">{formatCurrency(b.value)}</span>
+                        <div className="space-y-6 lg:col-span-2">
+                            {selectedPrograms?.map((prog: any, pIdx: number) => {
+                                const programInstallments = installmentsDetails.filter((d: any) => d.program_id === prog.id);
+                                if (programInstallments.length === 0) return null;
+
+                                return (
+                                    <div key={prog.id} className="p-4 bg-black/40 backdrop-blur-md border border-white/5 rounded-2xl space-y-4 shadow-lg shadow-black/40">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-[#00E5FF] border-b border-white/10 pb-2">
+                                            Cronograma: {programLabelMap[programSelection[prog.id]] || prog.program_name} {getProgramCategory(programLabelMap[programSelection[prog.id]] || prog.program_name || '') === 'group' ? '(Clase Grupal)' : ''}
+                                        </h4>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-[11px] text-white/70 border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-primary/20 uppercase text-[12px] font-black tracking-[0.15em] text-white/50">
+                                                        <th className="p-3 text-left">#</th>
+                                                        <th className="p-3 text-left">Vencimiento</th>
+                                                        <th className="p-3 text-left">Valor Cuota</th>
+                                                        <th className="p-3 text-left">Valor Pagado</th>
+                                                        <th className="p-3 text-left">Referencia / Detalle</th>
+                                                        <th className="p-3 text-left">Fecha Real</th>
+                                                        <th className="p-3 text-center">Soporte</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {programInstallments.map((inst, idx) => {
+                                                        const globalIndex = installmentsDetails.findIndex((d: any) => d.program_id === prog.id && d.installment_number === inst.installment_number);
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                                                <td className="p-3 font-black">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-sm text-white">{inst.installment_number}</span>
+                                                                        {inst.concept && (
+                                                                            <span className="text-[9px] text-primary/60 uppercase font-black tracking-widest truncate max-w-[80px]">
+                                                                                {inst.concept}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-2">
-                                                    <MaskedCurrencyInput
-                                                        value={inst.amount_paid}
-                                                        onChange={(val) => handleInstallmentUpdate(idx, 'amount_paid', val)}
-                                                    />
-                                                </td>
-                                                <td className="p-3">
-                                                    <input
-                                                        type="text"
-                                                        value={inst.reference || inst.entity || ''}
-                                                        onChange={(e) => handleInstallmentUpdate(idx, 'reference', e.target.value)}
-                                                        placeholder="Nequi, Banco..."
-                                                        className="w-full max-w-[150px] bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-bold focus:ring-1 focus:ring-primary focus:outline-none transition-all"
-                                                    />
-                                                </td>
-                                                <td className="p-3">
-                                                    <input
-                                                        type="date"
-                                                        value={inst.payment_date || ''}
-                                                        onChange={(e) => handleInstallmentUpdate(idx, 'payment_date', e.target.value)}
-                                                        className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[12px] text-white font-black uppercase focus:ring-1 focus:ring-primary focus:outline-none transition-all"
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="p-4 glass-panel border border-white/10 rounded-2xl space-y-4 shadow-xl">
-                            <h4 className="text-[10px] font-black uppercase text-slate-500 dark:text-white/30 tracking-widest">
-                                Auditoria de Pago General
-                            </h4>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 dark:text-white/30 tracking-widest">
-                                    Medio de Pago
-                                </label>
-                                <select
-                                    value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
-                                >
-                                    <option value="Efectivo" className="bg-[#0a0a0a]">Efectivo</option>
-                                    <option value="Transferencia" className="bg-[#0a0a0a]">Transferencia</option>
-                                    <option value="Tarjeta" className="bg-[#0a0a0a]">Tarjeta</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                    Referencia de Pago
-                                </label>
-                                <input
-                                    type="text"
-                                    value={referenceCode}
-                                    onChange={(e) => setReferenceCode(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
-                                    placeholder="Ej. 00012345"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                    Entidad Financiera / Detalle
-                                </label>
-                                <input
-                                    type="text"
-                                    value={financialEntity}
-                                    onChange={(e) => setFinancialEntity(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
-                                    placeholder="Banco, billetera, etc."
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-                                    Abono Inicial (Hoy)
-                                </label>
-                                <MaskedCurrencyInput
-                                    value={initialPayment}
-                                    onChange={(val) => setInitialPayment(val)}
-                                    className="!text-sm !py-3"
-                                />
-                            </div>
+                                                                </td>
+                                                                <td className="p-3 text-[13px] text-white/80 font-bold">{inst.projected_date}</td>
+                                                                <td className="p-3 font-mono">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-white text-[1.15rem] font-black tracking-tight">{formatCurrency(inst.amount_due)}</span>
+                                                                        {(inst.breakdown?.length > 1) && (
+                                                                            <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2 bg-white/5 p-2 rounded-lg">
+                                                                                {inst.breakdown.map((b: any, bi: number) => (
+                                                                                    <div key={bi} className="flex justify-between text-[11px] uppercase font-bold text-white/60 leading-relaxed min-w-[120px]">
+                                                                                        <span className="opacity-60">{b.label}</span>
+                                                                                        <span className="text-white font-mono ml-4">{formatCurrency(b.value)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-2 min-w-[120px]">
+                                                                    <MaskedCurrencyInput
+                                                                        value={inst.amount_paid}
+                                                                        onChange={(val) => handleInstallmentUpdate(globalIndex, 'amount_paid', val)}
+                                                                        className="!py-1 !text-[12px]"
+                                                                    />
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={inst.reference || inst.entity || ''}
+                                                                        onChange={(e) => handleInstallmentUpdate(globalIndex, 'reference', e.target.value)}
+                                                                        placeholder="Nequi..."
+                                                                        className="w-full max-w-[120px] bg-black/40 border border-white/10 rounded-xl px-2 py-1 text-white text-[11px] font-bold focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                                                                    />
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <input
+                                                                        type="date"
+                                                                        value={inst.payment_date || ''}
+                                                                        onChange={(e) => handleInstallmentUpdate(globalIndex, 'payment_date', e.target.value)}
+                                                                        className="w-[110px] bg-black/40 border border-white/10 rounded-xl px-2 py-1 text-[10px] text-white font-black uppercase focus:ring-1 focus:ring-primary focus:outline-none transition-all [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
+                                                                    />
+                                                                </td>
+                                                                <td className="p-2">
+                                                                    <FileUploaderCell
+                                                                        value={inst.evidence_url}
+                                                                        onChange={(url) => handleInstallmentUpdate(globalIndex, 'evidence_url', url)}
+                                                                        studentName={`${enrollment?.student?.first_name} ${enrollment?.student?.last_name}`}
+                                                                        semester={enrollment?.semester}
+                                                                        paymentTitle={`${prog.program_name} - Cuota ${inst.installment_number}`}
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -1389,7 +1610,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         <div className="text-right space-y-2">
                             <div className="flex flex-col items-end">
                                 <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest flex items-center gap-2">
-                                    Total Calculado 
+                                    Total Calculado
                                     <span className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 px-1.5 py-0.5 rounded text-[8px] font-black border border-yellow-500/20">
                                         Liquidación Final {enrollment.semester}
                                     </span>
@@ -1398,7 +1619,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     {formatCurrency(totalAmount || 0)}
                                 </p>
                             </div>
-                            
+
                             <div className="bg-black/40 p-3 rounded-xl border border-white/5 space-y-1.5 min-w-[240px] shadow-inner">
                                 <div className="flex justify-between text-[11px] font-bold text-white/40">
                                     <span>VALOR COMERCIAL MATRÍCULA</span>
@@ -1455,7 +1676,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     </div>
 
                     {/* LÓGICA DE AISLAMIENTO NUCLEAR PARA IMPRESIÓN */}
-                    <style dangerouslySetInnerHTML={{ __html: `
+                    <style dangerouslySetInnerHTML={{
+                        __html: `
                         @media print {
                             /* Ocultar absolutamente todo en el body */
                             body > *:not(#print-portal) { 
@@ -1513,14 +1735,14 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     {/* VISTA DE ORIGEN (OCULTA, SIRVE COMO TEMPLATE PARA EL PORTAL) */}
                     <div ref={statementRef} className="hidden">
                         <div className="w-[21.59cm] min-h-[27.94cm] mx-auto bg-white text-[#000000] font-sans printable-content">
-                            
+
                             {/* BLOQUE 1: ENCABEZADO INSTITUCIONAL */}
                             <div className="flex justify-between items-start border-b-[3px] border-purple-900 pb-8 mb-8 printable-content">
                                 <div className="flex gap-6 items-start">
-                                    <img 
-                                        src={`${window.location.origin}/logos/dyt-logo-light.png`} 
-                                        alt="DONES Y TALENTOS" 
-                                        className="h-24 w-auto object-contain mt-1" 
+                                    <img
+                                        src={`${window.location.origin}/logos/dyt-logo-light.png`}
+                                        alt="DONES Y TALENTOS"
+                                        className="h-24 w-auto object-contain mt-1"
                                         style={{ maxWidth: '4.5cm' }}
                                         crossOrigin="anonymous"
                                     />
@@ -1588,7 +1810,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-center p-4">
                                             <p className="text-[11px] font-black text-purple-900/40 uppercase italic tracking-widest leading-relaxed">
-                                                Perfil de Estudiante Adulto<br/>
+                                                Perfil de Estudiante Adulto<br />
                                                 <span className="text-[8px] font-normal not-italic">El alumno asume la responsabilidad total de sus compromisos académicos y financieros</span>
                                             </p>
                                         </div>
@@ -1602,7 +1824,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     <div className="h-[2px] w-8 bg-purple-900"></div>
                                     Cronograma de Pagos y Liquidación del Semestre
                                 </h3>
-                                
+
                                 <table className="w-full text-left text-[12px] border-collapse" style={{ tableLayout: 'fixed' }}>
                                     <thead>
                                         <tr className="border-y-[2px] border-purple-900 text-[10px] font-black uppercase tracking-widest text-[#000000] bg-gray-50">
@@ -1640,8 +1862,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     <div className="p-6 bg-[#f9fafb] rounded-2xl border-2 border-gray-100">
                                         <h4 className="text-[11px] font-black text-purple-900 uppercase tracking-widest mb-2">Cláusula de Compromiso</h4>
                                         <p className="text-[9px] text-gray-900 leading-normal text-justify uppercase font-bold tracking-tight">
-                                            El abajo firmante declara conocer y aceptar el reglamento financiero de la institución. 
-                                            Se compromete a realizar los pagos en las fechas estipuladas. 
+                                            El abajo firmante declara conocer y aceptar el reglamento financiero de la institución.
+                                            Se compromete a realizar los pagos en las fechas estipuladas.
                                             Este documento oficial certifica su estado de cuenta a la fecha.
                                         </p>
                                     </div>
@@ -1681,7 +1903,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                     </div>
                                     <div className="pt-8 text-right">
                                         <p className="text-[8px] text-gray-400 font-mono italic uppercase">
-                                            Registro de Auditoría Digital: {paymentPlan?.id?.toUpperCase() || 'S/N'}<br/>
+                                            Registro de Auditoría Digital: {paymentPlan?.id?.toUpperCase() || 'S/N'}<br />
                                             Generado por Sistema de Gestión SIA D&T - Versión 2026.1
                                         </p>
                                     </div>
@@ -1750,7 +1972,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                             {installmentsDetails.map((inst, i) => (
                                                 <div key={i} className="flex justify-between items-center bg-black/20 p-2 rounded-lg">
                                                     <div className="flex flex-col">
-                                                        <span className="text-white font-bold text-[10px]">Pago #{i+1}</span>
+                                                        <span className="text-white font-bold text-[10px]">Pago #{i + 1}</span>
                                                         <span className="text-white/40 text-[9px]">{inst.projected_date}</span>
                                                     </div>
                                                     <div className="text-right">

@@ -3,6 +3,21 @@
 import { createClient } from '@/infra/services/server';
 import { revalidatePath } from 'next/cache';
 
+export async function getTeachers() {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching teachers:', error);
+        return [];
+    }
+    return data || [];
+}
+
 export async function getGlobalSettings(semester: string) {
     const supabase = await createClient();
     const { data, error } = await supabase

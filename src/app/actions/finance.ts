@@ -250,7 +250,7 @@ export async function sealPaymentPlan(input: {
     start_date?: string;
     installments_details?: any[];
     program_instruments?: Array<{ program_id: string; instrument_id: string | null }>;
-    program_updates?: Array<{ program_id: string; program_name: string; group_class_id?: string | null }>;
+    program_updates?: Array<{ program_id: string; program_name: string; group_class_id?: string | null; teacher_id?: string | null; schedules?: any[]; observations?: string; isNew?: boolean; isDeleted?: boolean }>;
     discount_percentage?: number;
 }) {
     try {
@@ -332,23 +332,57 @@ export async function sealPaymentPlan(input: {
 
         if (input.program_updates && input.program_updates.length > 0) {
             for (const entry of input.program_updates) {
+                if (entry.isDeleted) {
+                    if (!entry.program_id.startsWith('new-')) {
+                        const { error: deleteError } = await supabase
+                            .from('dyt_enrollment_programs')
+                            .delete()
+                            .eq('id', entry.program_id)
+                            .eq('enrollment_id', plan.enrollment_id);
+                        if (deleteError) {
+                            console.error('[FINANCE SEAL] Error eliminando programa:', deleteError);
+                        }
+                    }
+                    continue;
+                }
+
                 const updatePayload: Record<string, any> = { program_name: entry.program_name };
                 if (entry.group_class_id !== undefined) {
                     updatePayload.group_class_id = entry.group_class_id;
                 }
+                if (entry.teacher_id !== undefined) {
+                    updatePayload.teacher_id = entry.teacher_id;
+                }
+                if (entry.schedules !== undefined) {
+                    updatePayload.schedules = entry.schedules;
+                }
+                if (entry.observations !== undefined) {
+                    updatePayload.observations = entry.observations;
+                }
 
-                const { error: programUpdateError } = await supabase
-                    .from('dyt_enrollment_programs')
-                    .update(updatePayload)
-                    .eq('id', entry.program_id)
-                    .eq('enrollment_id', plan.enrollment_id);
+                if (entry.isNew) {
+                    updatePayload.enrollment_id = plan.enrollment_id;
+                    const { error: insertError } = await supabase
+                        .from('dyt_enrollment_programs')
+                        .insert(updatePayload);
+                    if (insertError) {
+                        console.error('[FINANCE SEAL] Error insertando programa:', insertError);
+                    }
+                } else {
+                    const { error: programUpdateError } = await supabase
+                        .from('dyt_enrollment_programs')
+                        .update(updatePayload)
+                        .eq('id', entry.program_id)
+                        .eq('enrollment_id', plan.enrollment_id);
 
-                if (programUpdateError) {
-                    console.error('[FINANCE SEAL] Error actualizando programa:', programUpdateError);
-                    return { success: false, error: 'Error al actualizar programa del estudiante.' };
+                    if (programUpdateError) {
+                        console.error('[FINANCE SEAL] Error actualizando programa:', programUpdateError);
+                        return { success: false, error: 'Error al actualizar programa del estudiante.' };
+                    }
                 }
             }
         }
+
 
         let transaction = null;
 
