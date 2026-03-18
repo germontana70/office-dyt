@@ -36,25 +36,6 @@ export default async function MatriculasPage() {
                 {/* Módulo de Estadísticas Central */}
                 <EnrollmentStats totalStudents={students.length} semester={SEMESTER} />
 
-                {/* Acciones Rápidas con animaciones escenificadas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-5 fade-in duration-700 delay-75 fill-mode-both">
-                    {/* Tarjeta Reintegrar */}
-                    <GlassCard interactive className="p-5 flex items-center justify-between group transition-all duration-300">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-all">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                            </div>
-                            <span className="font-bold text-foreground/90 group-hover:text-primary transition-colors uppercase tracking-widest text-[11px]">Reintegrar Estudiante</span>
-                        </div>
-                        <span className="text-primary/70 group-hover:translate-x-1 transition-transform">→</span>
-                    </GlassCard>
-
-                    {/* Modal Retirar */}
-                    <WithdrawStudentModal students={students} />
-                </div>
-
                 {/* Buscador Principal y Visor de Auditoría */}
                 <section>
                     <MatriculasClientView students={students} semester={SEMESTER} />

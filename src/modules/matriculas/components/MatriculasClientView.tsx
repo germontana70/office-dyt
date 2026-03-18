@@ -12,8 +12,12 @@ import {
     Smartphone, Mail, MapPin, CalendarDays,
     Activity, FileText, Hash, Phone,
     Droplets, ShieldPlus, ChevronDown,
-    AlertCircle, UserCheck, Save
+    AlertCircle, UserCheck, Save, UserPlus, Search, Loader2, X,
+    RotateCw
 } from 'lucide-react';
+import { searchStudentsHybrid, reintegrateStudentFromHistory, HybridSearchResult } from '@/app/actions/reintegrate';
+import { useRouter } from 'next/navigation';
+import { WithdrawStudentModal } from './WithdrawStudentModal';
 
 interface MatriculasClientViewProps {
     students: CurrentStudent[];
@@ -320,6 +324,176 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// REINTEGRATE MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ReintegrateModal({ 
+    isOpen, 
+    onClose, 
+    semester 
+}: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    semester: string;
+}) {
+    const router = useRouter();
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<HybridSearchResult[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleSearch = async (val: string) => {
+        setQuery(val);
+        if (val.length < 3) {
+            setResults([]);
+            return;
+        }
+        setIsSearching(true);
+        try {
+            const data = await searchStudentsHybrid(val, semester);
+            setResults(data);
+        } catch (error) {
+            console.error('Search error:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleReintegrate = async (student: HybridSearchResult) => {
+        if (student.source === 'current') {
+            alert('Este estudiante ya está activo en el semestre actual.');
+            return;
+        }
+
+        const confirmed = confirm(`¿Deseas reintegrar a ${student.first_name} ${student.last_name} al semestre ${semester}?`);
+        if (!confirmed) return;
+
+        setIsProcessing(true);
+        try {
+            const res = await reintegrateStudentFromHistory(student.id, semester);
+            if (res.success) {
+                alert('Estudiante reintegrado exitosamente.');
+                router.refresh();
+                onClose();
+            } else {
+                alert(`Error: ${res.error}`);
+            }
+        } catch (error) {
+            console.error('Reintegration error:', error);
+            alert('Ocurrió un error inesperado durante el reintegro.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
+            {/* Backdrop */}
+            <div 
+                className="absolute inset-0 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300" 
+                onClick={onClose} 
+            />
+            
+            {/* Modal Content */}
+            <GlassCard className="relative w-full max-w-2xl overflow-hidden border-primary/20 shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-in zoom-in-95 fade-in duration-300">
+                {/* Header */}
+                <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent">
+                            <UserPlus className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white">Reintegrar Estudiante</h3>
+                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Desde el histórico a {semester}</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={onClose}
+                        className="p-2 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Search Body */}
+                <div className="p-6 space-y-6">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <input 
+                            autoFocus
+                            type="text"
+                            placeholder="Buscar por nombre o documento en el histórico..."
+                            value={query}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 focus:border-accent/40 rounded-xl pl-11 pr-4 py-4 text-sm text-white placeholder:text-white/20 outline-none transition-all"
+                        />
+                        {isSearching && (
+                            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent animate-spin" />
+                        )}
+                    </div>
+
+                    {/* Results Area */}
+                    <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                        {results.length > 0 ? (
+                            results.map(student => (
+                                <button
+                                    key={student.id}
+                                    onClick={() => handleReintegrate(student)}
+                                    disabled={isProcessing}
+                                    className="w-full flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-accent/30 hover:bg-accent/5 transition-all text-left group disabled:opacity-50"
+                                >
+                                    <div className="flex flex-col gap-1 text-left">
+                                        <span className="text-xs font-black uppercase tracking-tight text-white group-hover:text-accent transition-colors">
+                                            {student.name}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">DOC: {student.document_number}</span>
+                                            <span className="text-[10px] font-bold text-accent/60 uppercase tracking-widest bg-accent/5 px-1.5 py-0.5 rounded border border-accent/10 italic">
+                                                Origen: {student.historical_semester || 'Histórico'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {student.source === 'historical' ? (
+                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-accent bg-white/5 border border-white/10 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+                                                HISTÓRICO
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-primary bg-white/5 border border-white/10 opacity-40">
+                                                ACTIVO
+                                            </span>
+                                        )}
+                                        <ChevronDown className="w-4 h-4 text-white/20 -rotate-90" />
+                                    </div>
+                                </button>
+                            ))
+                        ) : query.length >= 3 && !isSearching ? (
+                            <div className="text-center py-8">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-white/20">No se encontraron resultados</p>
+                            </div>
+                        ) : query.length > 0 && query.length < 3 ? (
+                            <div className="text-center py-8">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-white/20">Escribe al menos 3 caracteres...</p>
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+
+                {/* Loading State Overlay */}
+                {isProcessing && (
+                    <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-accent">Procesando Reintegro...</p>
+                    </div>
+                )}
+            </GlassCard>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -328,6 +502,7 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
     const [loading, setLoading] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<CurrentStudent | null>(null);
     const [activeTab, setActiveTab] = useState<TabId>('academico');
+    const [isReintegrateModalOpen, setIsReintegrateModalOpen] = useState(false);
 
     const handleStudentSelect = async (student: CurrentStudent) => {
         setSelectedStudent(student);
@@ -367,6 +542,29 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
 
     return (
         <div className="w-full flex flex-col gap-6">
+            {/* ── Acciones Rápidas (Transplanted from page.tsx for interactivity) ── */}
+            {!selectedStudent && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-5 fade-in duration-700 delay-75 fill-mode-both">
+                    {/* Tarjeta Reintegrar */}
+                    <GlassCard 
+                        interactive 
+                        onClick={() => setIsReintegrateModalOpen(true)}
+                        className="p-5 flex items-center justify-between group transition-all duration-300 border-white/5 hover:border-accent/40 bg-black/40 cursor-pointer"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-accent/10 text-accent group-hover:bg-accent/20 transition-all">
+                                <RotateCw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-500" />
+                            </div>
+                            <span className="font-bold text-foreground/90 group-hover:text-accent transition-colors uppercase tracking-[0.2em] text-[11px]">Reintegrar Estudiante</span>
+                        </div>
+                        <span className="text-accent/70 group-hover:translate-x-1 transition-transform">→</span>
+                    </GlassCard>
+
+                    {/* Modal Retirar */}
+                    <WithdrawStudentModal students={students} />
+                </div>
+            )}
+
             {/* ── Buscador ── */}
             <StudentSearchSelect
                 students={students}
@@ -375,6 +573,12 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
                     setAuditData(null);
                     setSelectedStudent(null);
                 }}
+            />
+
+            <ReintegrateModal 
+                isOpen={isReintegrateModalOpen}
+                onClose={() => setIsReintegrateModalOpen(false)}
+                semester={semester}
             />
 
             {/* ── Spinner ── */}
