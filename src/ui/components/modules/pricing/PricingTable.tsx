@@ -146,9 +146,9 @@ export function PricingTable({ prices, semester }: PricingTableProps) {
                     <thead className="sticky top-0 z-10 bg-black/80 backdrop-blur-xl">
                         <tr className="border-b border-white/10 text-[11px] uppercase tracking-widest text-primary/70">
                             <th className="p-4 font-black">Programa Académico</th>
-                            <th className="p-4 font-black w-1/4">Valor Contado</th>
-                            <th className="p-4 font-black w-1/4">% Incremento (Cuotas)</th>
-                            <th className="p-4 font-black w-1/4">Total Financiado (Redondeado)</th>
+                            <th className="p-4 font-black w-64">Valor Contado</th>
+                            <th className="p-4 font-black w-72">% Incremento (Cuotas)</th>
+                            <th className="p-4 font-black w-72">Total Financiado (Redondeado)</th>
                             <th className="p-4 font-black text-center w-24">Acciones</th>
                         </tr>
                     </thead>

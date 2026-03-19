@@ -15,7 +15,7 @@ export default async function PreciosPage() {
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
             <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-secondary/10 blur-[150px] rounded-full pointer-events-none" />
 
-            <main className="relative z-10 max-w-5xl mx-auto space-y-10">
+            <main className="relative z-10 max-w-full mx-auto space-y-10">
 
                 {/* Cabecera Premium */}
                 <header className="space-y-4 animate-in slide-in-from-top-6 fade-in duration-700">
