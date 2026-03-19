@@ -3,19 +3,36 @@
 import { google } from 'googleapis';
 import { PassThrough } from 'stream';
 import path from 'path';
+import fs from 'fs';
 
 // This safely ensures we can authenticate Google Drive if credentials exist
 const getDriveClient = () => {
     try {
-        const credentialsPath = path.join(process.cwd(), 'google-credentials/credentials.json');
+        const credentialsPath = path.join(process.cwd(), 'google-credentials', 'credentials.json');
+        
+        if (!fs.existsSync(credentialsPath)) {
+            throw new Error('El archivo credentials.json no existe en el directorio google-credentials.');
+        }
+
+        const credentialsData = fs.readFileSync(credentialsPath, 'utf8');
+        const credentials = JSON.parse(credentialsData);
+
+        if (!credentials.private_key || !credentials.client_email) {
+            throw new Error('El archivo credentials.json está vacío o mal configurado.');
+        }
+
         const auth = new google.auth.GoogleAuth({
-            keyFile: credentialsPath,
+            credentials: {
+                client_email: credentials.client_email,
+                private_key: credentials.private_key.replace(/\\n/g, '\n'),
+            },
             scopes: ['https://www.googleapis.com/auth/drive'],
         });
+        
         return google.drive({ version: 'v3', auth });
-    } catch (error) {
+    } catch (error: any) {
         console.error('[DRIVE SETUP] Missing or invalid google-credentials/credentials.json', error);
-        throw new Error('Google Drive integration is not configured properly.');
+        throw new Error(error.message || 'Google Drive integration is not configured properly.');
     }
 };
 
