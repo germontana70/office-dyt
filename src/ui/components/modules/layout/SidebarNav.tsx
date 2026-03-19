@@ -169,28 +169,6 @@ export function SidebarNav() {
                         >
                             Auditoría JSONB / Mapper
                         </Link>
-                        <Link
-                            href="/dashboard/audit-finance/legalize"
-                            className={cn(
-                                "block rounded-lg px-3 py-2 text-sm transition-all duration-300",
-                                pathname.startsWith('/dashboard/audit-finance/legalize')
-                                    ? "bg-emerald-400/10 text-emerald-200 border border-emerald-400/20"
-                                    : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground"
-                            )}
-                        >
-                            Legalizacion Masiva
-                        </Link>
-                        <Link
-                            href="/dashboard/auditoria/historico"
-                            className={cn(
-                                "block rounded-lg px-3 py-2 text-sm transition-all duration-300",
-                                pathname === '/dashboard/auditoria/historico'
-                                    ? "bg-emerald-400/10 text-emerald-200 border border-emerald-400/20"
-                                    : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground"
-                            )}
-                        >
-                            Auditoría Histórico
-                        </Link>
                     </div>
                 )}
             </div>

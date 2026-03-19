@@ -837,9 +837,9 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 const pricing = programPrices[key];
                 const cash = pricing?.cash || 0;
                 const increment = pricing?.increment || 0;
-                
                 const n = clampInstallments(prog.installmentsCount);
-                const baseDate = new Date(prog.firstPaymentDate);
+                const [year, month, day] = prog.firstPaymentDate.split('-');
+                const baseDate = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
                 const discountFactor = 1 - (prog.discount / 100);
 
                 const discountedCash = cash * discountFactor;
