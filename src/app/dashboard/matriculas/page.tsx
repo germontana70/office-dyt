@@ -24,7 +24,7 @@ export default async function MatriculasPage() {
                 <header className="space-y-4 animate-in slide-in-from-top-6 fade-in duration-700">
                     <div className="flex items-center gap-3">
                         <div className="w-1.5 h-8 bg-primary rounded-full shadow-sm dark:shadow-[0_0_15px_hsl(var(--primary))]" />
-                        <GradientText as="h1" className="text-3xl font-extrabold tracking-tighter uppercase italic">
+                        <GradientText as="h1" className="text-3xl font-extrabold tracking-tighter uppercase italic pr-2">
                             Gestión de Matrículas
                         </GradientText>
                     </div>

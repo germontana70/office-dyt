@@ -11,7 +11,7 @@ export const GradientText = forwardRef<HTMLElement, GradientTextProps>(
         return (
             <Tag
                 ref={ref as any}
-                className={`bg-gradient-${direction} ${colors} bg-clip-text text-transparent ${className}`}
+                className={`bg-gradient-${direction} ${colors} bg-clip-text text-transparent pr-2 ${className}`}
                 {...props}
             >
                 {children}

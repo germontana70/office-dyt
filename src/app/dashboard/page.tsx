@@ -7,7 +7,6 @@ import { CurrentStudentRepository } from '@/modules/matriculas/repository/curren
 import { TeacherRepository } from '@/modules/maestros/repository/teacher-repo';
 import { getActiveSemesterName } from '@/modules/configuracion/actions/set-active-semester';
 import { SyncEngineButton } from '@/components/dashboard/SyncEngineButton';
-import { MigrationCard } from '@/components/dashboard/MigrationCard';
 
 export default async function DashboardPage() {
     const activeSemester = await getActiveSemesterName();
@@ -86,13 +85,6 @@ export default async function DashboardPage() {
 
             </div>
 
-            {/* Zona Administrativa / Migración */}
-            <div className="pt-8 border-t border-white/5">
-                <h2 className="text-[10px] font-black uppercase text-white/20 tracking-[0.3em] mb-6">Herramientas de Infraestructura</h2>
-                <div className="grid gap-6 md:grid-cols-2">
-                    <MigrationCard />
-                </div>
-            </div>
 
         </div>
     );
