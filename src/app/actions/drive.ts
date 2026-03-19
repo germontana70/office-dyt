@@ -98,9 +98,11 @@ export async function uploadPaymentEvidence(
         }
 
         const drive = getDriveClient();
+        const MASTER_FOLDER_ID = '1IkBGA2kA8ljcEnhr9KEtglSFuYouC0sT';
 
+        console.log(`[DRIVE UPLOAD] Phase 0 - Anchoring to Master Folder: ${MASTER_FOLDER_ID}`);
         console.log(`[DRIVE UPLOAD] Phase 1 - Resolving Canvas (Semester): ${semester}`);
-        const semesterFolderId = await getOrCreateFolder(drive, semester);
+        const semesterFolderId = await getOrCreateFolder(drive, semester, MASTER_FOLDER_ID);
 
         const studentFolderName = `${studentName} - ${studentDocument}`;
         console.log(`[DRIVE UPLOAD] Phase 2 - Resolving Node (Student): ${studentFolderName}`);
