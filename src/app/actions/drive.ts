@@ -8,30 +8,17 @@ import fs from 'fs';
 // This safely ensures we can authenticate Google Drive if credentials exist
 const getDriveClient = () => {
     try {
-        const potentialPaths = [
-            path.join(process.cwd(), 'google-credentials', 'credentials.json'),
-            path.join(process.cwd(), 'google-credentials', 'credenciales_robot.json'),
-            path.join(process.cwd(), 'credenciales', 'credenciales_robot.json')
-        ];
+        const credentialsPath = path.join(process.cwd(), 'credenciales', 'credenciales_robot.json');
 
-        let validPath: string | null = null;
-        for (const p of potentialPaths) {
-            if (fs.existsSync(p)) {
-                validPath = p;
-                console.log(`[DRIVE SETUP] Credenciales encontradas en: ${p}`);
-                break;
-            }
+        if (!fs.existsSync(credentialsPath)) {
+            throw new Error(`Error: No encontré el archivo en la ruta exacta: ${credentialsPath}`);
         }
 
-        if (!validPath) {
-            throw new Error(`Archivos de credenciales no encontrados. Rutas buscadas:\n- ${potentialPaths.join('\n- ')}`);
-        }
-
-        const credentialsData = fs.readFileSync(validPath, 'utf8');
+        const credentialsData = fs.readFileSync(credentialsPath, 'utf8');
         const credentials = JSON.parse(credentialsData);
 
         if (!credentials.private_key || !credentials.client_email) {
-            throw new Error(`El archivo ${path.basename(validPath)} está vacío o mal configurado.`);
+            throw new Error(`El archivo ${path.basename(credentialsPath)} está vacío o mal configurado.`);
         }
 
         const auth = new google.auth.GoogleAuth({
