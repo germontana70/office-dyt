@@ -114,7 +114,7 @@ export async function getProgramPricesBySemester(semester: string) {
 export async function upsertInstrument(instrument: { id?: string, name: string, is_active: boolean }) {
     const supabase = await createClient();
     const payload = {
-        name: instrument.name.trim().replace(/Piano\s+Entondao/gi, 'Piano Entonado'),
+        name: instrument.name.trim(),
         is_active: instrument.is_active,
         updated_at: new Date().toISOString()
     };

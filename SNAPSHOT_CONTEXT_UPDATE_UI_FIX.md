@@ -9,6 +9,8 @@ Se ha ejecutado una restauración estética crítica en el Dashboard de Office D
    - `SyncEngineButton.tsx`: Eliminado `bg-white/80` y bordes de color cian opacos.
    - `MigrationCard.tsx`: Eliminado `bg-red-50/80` y bordes rojos opacos.
 3. **Estandarización**: Todos los contenedores de tarjetas ahora utilizan exclusivamente `bg-black/60` con `backdrop-blur-md` (o superior) y `border-white/10`.
+4. **Erradicación de Acceso Crítico (Seguridad)**: 
+   - `ConfiguracionPage.tsx`: Se ha removido el punto de acceso visual a `MigrationCard` (Zona de Peligro) tras la migración exitosa. Esto mitiga el riesgo de ejecución accidental en producción. El Server Action se mantiene para auditorías internas únicamente.
 
 ## Lógica Reforzada (ADN Office DYT)
 - **PROHIBIDO**: Grises sólidos en el Dashboard. Rompen la profundidad y la estética Neon-Glass.

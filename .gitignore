@@ -37,3 +37,4 @@ google-credentials/
 .env
 .env.production
 .env.local
+credenciales/

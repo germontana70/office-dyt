@@ -3,20 +3,34 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
+import { PremiumButton } from '@/ui/components/modules/buttons/PremiumButton';
 import { deleteInstrument, upsertInstrument } from '@/app/actions/settings';
+import { Loader2, Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-interface InstrumentManagerCardProps {
-    initialInstruments: any[];
+interface Instrument {
+    id: string;
+    name: string;
+    is_active: boolean;
 }
 
+interface InstrumentManagerCardProps {
+    initialInstruments: Instrument[];
+}
+
+/**
+ * @component InstrumentManagerCard
+ * @description Gestor de catálogo de instrumentos con estética Neon-Glass.
+ * Permite añadir, editar (fix typos), activar/desactivar y eliminar instrumentos.
+ */
 export function InstrumentManagerCard({ initialInstruments }: InstrumentManagerCardProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
-    const [instruments, setInstruments] = useState(initialInstruments);
-    const [newName, setNewName] = useState('');
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [instruments, setInstruments] = useState<Instrument[]>(initialInstruments);
+    const [formName, setFormName] = useState('');
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [status, setStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // Sincronizar estado cuando las props cambien (ej. tras router.refresh)
+    // Sincronizar estado cuando las props cambien tras revalidatePath / router.refresh
     useEffect(() => {
         setInstruments(initialInstruments);
     }, [initialInstruments]);
@@ -29,6 +43,8 @@ export function InstrumentManagerCard({ initialInstruments }: InstrumentManagerC
             const result = await upsertInstrument({ ...instrument, is_active: !currentStatus });
             if (result.success) {
                 router.refresh();
+            } else {
+                setStatus({ type: 'error', text: result.error || 'Error al cambiar estado.' });
             }
         });
     };
@@ -39,105 +55,190 @@ export function InstrumentManagerCard({ initialInstruments }: InstrumentManagerC
         startTransition(async () => {
             const result = await deleteInstrument(id);
             if (result.success) {
-                setMessage({ type: 'success', text: 'Instrumento eliminado.' });
+                setStatus({ type: 'success', text: 'Instrumento eliminado correctamente.' });
                 router.refresh();
-                setTimeout(() => setMessage(null), 3000);
+                setTimeout(() => setStatus(null), 3000);
             } else {
-                setMessage({ type: 'error', text: result.error || 'Error al eliminar.' });
-                setTimeout(() => setMessage(null), 4000);
+                setStatus({ type: 'error', text: result.error || 'Error al eliminar.' });
             }
         });
     };
 
-    const handleAdd = () => {
-        if (!newName.trim()) return;
+    const handleSubmit = () => {
+        const trimmedName = formName.trim();
+        if (!trimmedName) return;
 
         startTransition(async () => {
-            const result = await upsertInstrument({ name: newName, is_active: true });
+            const payload = editingId 
+                ? { id: editingId, name: trimmedName, is_active: true }
+                : { name: trimmedName, is_active: true };
+
+            const result = await upsertInstrument(payload);
+            
             if (result.success) {
-                setNewName('');
-                setMessage({ type: 'success', text: 'Instrumento añadido.' });
+                setFormName('');
+                setEditingId(null);
+                setStatus({ 
+                    type: 'success', 
+                    text: editingId ? 'Instrumento actualizado.' : 'Instrumento añadido.' 
+                });
                 router.refresh();
-                setTimeout(() => setMessage(null), 3000);
+                setTimeout(() => setStatus(null), 3000);
             } else {
-                setMessage({ type: 'error', text: result.error || 'Error al añadir.' });
-                setTimeout(() => setMessage(null), 4000);
+                setStatus({ type: 'error', text: result.error || 'Error al guardar.' });
             }
         });
+    };
+
+    const startEdit = (inst: Instrument) => {
+        setEditingId(inst.id);
+        setFormName(inst.name);
+        // Scroll up to form if mobile
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setFormName('');
     };
 
     return (
-        <GlassCard className="p-8 border-pink-500/20 bg-pink-500/5 h-full relative overflow-hidden group">
-            <div className="absolute right-[-5%] top-[-5%] w-[300px] h-[300px] bg-pink-500/10 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-transform duration-700" />
+        <GlassCard className="p-8 border-primary/20 bg-black/60 backdrop-blur-2xl h-full relative overflow-hidden group">
+            {/* Resplandor decorativo de fondo */}
+            <div className="absolute right-[-10%] top-[-10%] w-[350px] h-[350px] bg-primary/10 rounded-full blur-[100px] pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
             
-            <div className="relative z-10 space-y-6">
-                <div>
-                    <h3 className="text-[12px] font-black uppercase text-pink-400 tracking-widest drop-shadow-md">Catálogo de Instrumentos</h3>
-                    <p className="text-3xl font-black mt-2 uppercase tracking-tighter drop-shadow-lg text-white">
-                        Gestión de Instrumentos
-                    </p>
+            <div className="relative z-10 space-y-8">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h3 className="text-[10px] font-black uppercase text-accent tracking-[0.2em] drop-shadow-md">Inventario Global</h3>
+                        <p className="text-3xl font-black mt-1 uppercase tracking-tighter drop-shadow-lg text-white italic">
+                            Instrumentos
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        placeholder="Nuevo instrumento (ej. Piano)"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                        className="flex-1 bg-black/40 border border-white/10 rounded-xl py-2 px-4 shadow-inner focus:outline-none focus:border-pink-500 transition-all text-sm"
-                    />
-                    <button
-                        onClick={handleAdd}
-                        disabled={isPending || !newName.trim()}
-                        className="px-4 py-2 bg-pink-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-pink-500 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                        {isPending ? '...' : '+ Añadir'}
-                    </button>
-                </div>
-
-                {message && (
-                    <p className={`text-[10px] font-black uppercase tracking-widest text-center ${message.type === 'success' ? 'text-green-400' : 'text-red-400'} animate-bounce`}>
-                        {message.text}
-                    </p>
-                )}
-
-                <div className="flex flex-wrap gap-2 max-h-[250px] overflow-y-auto pr-2 no-scrollbar content-start">
-                    {instruments.length === 0 && (
-                        <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold py-4 w-full text-center">No hay instrumentos registrados</p>
-                    )}
-                    {instruments.map((inst) => (
-                        <div
-                            key={inst.id}
-                            className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition-all flex items-center gap-2 group/pill ${
-                                inst.is_active 
-                                ? 'bg-pink-500/10 text-pink-300 border-pink-500/20' 
-                                : 'bg-white/5 text-white/30 border-white/10 line-through decoration-white/50'
-                            }`}
-                        >
-                            <button
-                                onClick={() => handleToggleStatus(inst.id, inst.is_active)}
-                                disabled={isPending}
-                                className="flex items-center gap-2 hover:opacity-90 transition-opacity"
-                                title="Activar o desactivar"
+                {/* Formulario de Entrada */}
+                <div className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold ml-1">
+                            {editingId ? 'Editar Instrumento' : 'Nuevo Instrumento'}
+                        </label>
+                        <div className="flex gap-3">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Ej. Piano Entonado, Guitarra, Violín..."
+                                    value={formName}
+                                    onChange={(e) => setFormName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 shadow-inner focus:outline-none focus:border-accent transition-all text-sm text-white placeholder:text-white/20"
+                                />
+                                {editingId && (
+                                    <button 
+                                        onClick={cancelEdit}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            <PremiumButton
+                                onClick={handleSubmit}
+                                disabled={isPending || !formName.trim()}
+                                variant="primary"
+                                size="md"
+                                className="!h-[46px] min-w-[120px]"
                             >
-                                <span>{inst.name}</span>
-                                <span className={`w-1.5 h-1.5 rounded-full ${inst.is_active ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500/50'}`} />
-                            </button>
-                            <button
-                                onClick={() => handleDelete(inst.id, inst.name)}
-                                disabled={isPending}
-                                className="ml-1 text-red-400/80 hover:text-red-400 transition-colors"
-                                title="Eliminar instrumento"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                                {isPending ? (
+                                    <Loader2 className="animate-spin" size={18} />
+                                ) : editingId ? (
+                                    'Guardar'
+                                ) : (
+                                    <><Plus size={18} className="mr-2" /> Añadir</>
+                                )}
+                            </PremiumButton>
                         </div>
-                    ))}
+                    </div>
+
+                    {status && (
+                        <div className={`flex items-center gap-2 text-[11px] font-black uppercase tracking-widest p-2 rounded-lg ${
+                            status.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        } animate-in fade-in slide-in-from-left-2 duration-300`}>
+                            {status.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                            {status.text}
+                        </div>
+                    )}
+                </div>
+
+                {/* Listado de Instrumentos (Scrollable area) */}
+                <div className="space-y-4">
+                    <h4 className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold ml-1">Catálogo Actual</h4>
+                    <div className="flex flex-wrap gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar content-start">
+                        {instruments.length === 0 && !isPending && (
+                            <div className="w-full py-10 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl bg-white/[0.02]">
+                                <p className="text-[10px] text-white/20 uppercase tracking-widest font-black">No hay instrumentos registrados</p>
+                            </div>
+                        )}
+                        
+                        {instruments.map((inst) => (
+                            <div
+                                key={inst.id}
+                                className={`group/pill pl-4 pr-2 py-2 rounded-xl text-[12px] font-bold uppercase tracking-wider border transition-all flex items-center gap-3 backdrop-blur-sm hover:bg-white/5 ${
+                                    inst.is_active 
+                                    ? 'bg-primary/10 text-white border-primary/30 hover:border-accent/40' 
+                                    : 'bg-white/5 text-white/40 border-white/5 line-through decoration-white/30'
+                                } ${editingId === inst.id ? 'ring-2 ring-accent border-accent/50' : ''}`}
+                            >
+                                <button
+                                    onClick={() => handleToggleStatus(inst.id, inst.is_active)}
+                                    disabled={isPending}
+                                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                                    title={inst.is_active ? "Desactivar" : "Activar"}
+                                >
+                                    <span>{inst.name}</span>
+                                    <div className={`w-2 h-2 rounded-full ${inst.is_active ? 'bg-accent shadow-[0_0_8px_hsl(var(--accent))]' : 'bg-red-500/30'}`} />
+                                </button>
+
+                                <div className="flex items-center gap-1 opacity-0 group-hover/pill:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => startEdit(inst)}
+                                        disabled={isPending}
+                                        className="p-1.5 text-white/40 hover:text-accent hover:bg-accent/10 rounded-lg transition-all"
+                                        title="Editar nombre"
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(inst.id, inst.name)}
+                                        disabled={isPending}
+                                        className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                                        title="Eliminar"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
+
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.02);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                }
+            `}</style>
         </GlassCard>
     );
 }

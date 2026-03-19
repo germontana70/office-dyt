@@ -4,7 +4,7 @@ import { CreateSemesterCard } from '@/modules/configuracion/components/CreateSem
 import { ChangeSemesterCard } from '@/modules/configuracion/components/ChangeSemesterCard';
 import { GlobalSettingsCard } from '@/modules/configuracion/components/GlobalSettingsCard';
 import { InstrumentManagerCard } from '@/modules/configuracion/components/InstrumentManagerCard';
-import { MigrationCard } from '@/components/dashboard/MigrationCard';
+// import { MigrationCard } from '@/components/dashboard/MigrationCard'; // TODO: Retained for historical reference only, DO NOT RENDER
 import { getGlobalSettings, getInstruments } from '@/app/actions/settings';
 import Link from 'next/link';
 
@@ -112,10 +112,12 @@ export default async function ConfiguracionPage() {
                         </div>
                     </div>
 
-                    {/* SECCIÓN 4: ZONA DE PELIGRO (Migración) */}
+                    {/* SECCIÓN 4: ZONA DE PELIGRO (Migración) — HIDDEN: COMPLETADA CON ÉXITO */}
+                    {/* 
                     <div className="pt-8 border-t border-white/5">
                         <MigrationCard />
-                    </div>
+                    </div> 
+                    */}
                 </div>
 
 
