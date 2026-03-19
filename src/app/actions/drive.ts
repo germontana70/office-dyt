@@ -1,6 +1,57 @@
 'use server';
 
-import { createClient } from '@/infra/services/server';
+import { google } from 'googleapis';
+import { PassThrough } from 'stream';
+import path from 'path';
+
+// This safely ensures we can authenticate Google Drive if credentials exist
+const getDriveClient = () => {
+    try {
+        const credentialsPath = path.join(process.cwd(), 'google-credentials/credentials.json');
+        const auth = new google.auth.GoogleAuth({
+            keyFile: credentialsPath,
+            scopes: ['https://www.googleapis.com/auth/drive'],
+        });
+        return google.drive({ version: 'v3', auth });
+    } catch (error) {
+        console.error('[DRIVE SETUP] Missing or invalid google-credentials/credentials.json', error);
+        throw new Error('Google Drive integration is not configured properly.');
+    }
+};
+
+/**
+ * Ensures a folder exists by name (and optionally within a parent).
+ * If not, creates it and returns the ID.
+ */
+async function getOrCreateFolder(drive: any, folderName: string, parentId?: string): Promise<string> {
+    const parentQuery = parentId ? ` and '${parentId}' in parents` : '';
+    const query = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false${parentQuery}`;
+    
+    const response = await drive.files.list({
+        q: query,
+        spaces: 'drive',
+        fields: 'files(id, name)',
+    });
+
+    if (response.data.files && response.data.files.length > 0) {
+        return response.data.files[0].id;
+    }
+
+    const folderMetadata: any = {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+    };
+    if (parentId) {
+        folderMetadata.parents = [parentId];
+    }
+
+    const createResponse = await drive.files.create({
+        requestBody: folderMetadata,
+        fields: 'id',
+    });
+
+    return createResponse.data.id;
+}
 
 export async function uploadPaymentEvidence(
     formData: FormData
@@ -8,37 +59,64 @@ export async function uploadPaymentEvidence(
     try {
         const file = formData.get('file') as File;
         const studentName = formData.get('studentName') as string;
+        const studentDocument = formData.get('studentDocument') as string;
         const semester = formData.get('semester') as string;
         const paymentTitle = formData.get('paymentTitle') as string;
 
-        if (!file || !studentName || !semester || !paymentTitle) {
+        if (!file || !studentName || !studentDocument || !semester || !paymentTitle) {
             return { success: false, error: 'Faltan parámetros requeridos.' };
         }
 
-        // Simulación o Lógica Real de Google Drive
-        // Por ahora, como no hay Google Drive SDK instalado nativamente en el repo visible, 
-        // y para evitar dependencias rotas o secretos fallidos, devolveremos un enlace Mock.
-        // O subiremos el archivo a un bucket de Supabase (storage: 'dyt_evidence').
+        const drive = getDriveClient();
+
+        console.log(`[DRIVE UPLOAD] Phase 1 - Resolving Canvas (Semester): ${semester}`);
+        const semesterFolderId = await getOrCreateFolder(drive, semester);
+
+        const studentFolderName = `${studentName} - ${studentDocument}`;
+        console.log(`[DRIVE UPLOAD] Phase 2 - Resolving Node (Student): ${studentFolderName}`);
+        const studentFolderId = await getOrCreateFolder(drive, studentFolderName, semesterFolderId);
+
+        console.log(`[DRIVE UPLOAD] Phase 3 - Generating Stream context...`);
+        const fileExtension = file.name.split('.').pop();
+        const customFileName = `Soporte_${paymentTitle.replace(/[\/\s]/g, '_')}_${Date.now()}.${fileExtension}`;
         
-        // Pero la restricción del User dice: "Conector de Google Drive (Server Action)... 
-        // crea ... drive.ts con una función uploadPaymentEvidence(file, studentName, semester, paymentTitle)"
-        // "La función debe crear automáticamente la carpeta del semestre (ej: 2026-1) y la subcarpeta del estudiante en Drive"
+        // Convert File to a readable native stream
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const stream = new PassThrough();
+        stream.end(buffer);
 
-        // Simularemos la espera y retorno para que la interfaz quede "Golden Rule" impecable
-        console.log(`[DRIVE UPLOAD] Uploading to Google Drive...`);
-        console.log(`[DRIVE UPLOAD] Semester Folder: ${semester}`);
-        console.log(`[DRIVE UPLOAD] Student Folder: ${studentName}`);
-        console.log(`[DRIVE UPLOAD] File Name: ${paymentTitle} - ${file.name}`);
+        console.log(`[DRIVE UPLOAD] Phase 4 - Transmitting payload to Drive...`);
+        const media = {
+            mimeType: file.type,
+            body: stream,
+        };
 
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulando red y creación de carpetas API Drive
+        const uploadResponse = await drive.files.create({
+            requestBody: {
+                name: customFileName,
+                parents: [studentFolderId],
+            },
+            media: media,
+            fields: 'id, webViewLink',
+        });
 
-        // Return a mock URL o Supabase Storage si queremos implementarlo:
-        const mockDriveUrl = `https://drive.google.com/file/d/mock_id_${Math.random().toString(36).substring(7)}/view`;
+        const fileId = uploadResponse.data.id;
+        
+        console.log(`[DRIVE UPLOAD] Phase 5 - Setting file permissions to public read...`);
+        await drive.permissions.create({
+            fileId: fileId as string,
+            requestBody: {
+                role: 'reader',
+                type: 'anyone',
+            },
+        });
 
-        return { success: true, url: mockDriveUrl };
+        console.log(`[DRIVE UPLOAD] Transaction SUCCESS.`);
+        return { success: true, url: uploadResponse.data.webViewLink as string };
 
     } catch (error: any) {
-        console.error('[DRIVE UPLOAD] Error:', error);
-        return { success: false, error: error.message || 'Error uploading file' };
+        console.error('[DRIVE UPLOAD] Critical exception:', error);
+        return { success: false, error: error.message || 'Error uploading file a Google Drive' };
     }
 }

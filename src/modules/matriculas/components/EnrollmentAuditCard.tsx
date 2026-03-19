@@ -203,12 +203,14 @@ function FileUploaderCell({
     value,
     onChange,
     studentName,
+    studentDocument,
     semester,
     paymentTitle
 }: {
     value: string | null;
     onChange: (url: string) => void;
     studentName: string;
+    studentDocument: string;
     semester: string;
     paymentTitle: string;
 }) {
@@ -219,44 +221,59 @@ function FileUploaderCell({
         if (!file) return;
 
         startTransition(async () => {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('studentName', studentName);
-            formData.append('semester', semester);
-            formData.append('paymentTitle', paymentTitle);
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('studentName', studentName);
+                formData.append('studentDocument', studentDocument);
+                formData.append('semester', semester);
+                formData.append('paymentTitle', paymentTitle);
 
-            const result = await uploadPaymentEvidence(formData);
-            if (result?.success && result.url) {
-                onChange(result.url);
-            } else {
-                alert('Error subiendo archivo: ' + result?.error);
+                const result = await uploadPaymentEvidence(formData);
+                console.log("[DRIVE API RESPONSE]:", result);
+
+                if (result?.success && result.url) {
+                    onChange(result.url);
+                } else {
+                    alert('Error subiendo archivo: ' + (result?.error || 'No se recibió URL de validación'));
+                }
+            } catch (err: any) {
+                console.error("[DRIVE UPLOAD EXCEPTION]:", err);
+                alert('Excepción crítica al subir el archivo: ' + (err.message || 'Desconocido'));
             }
         });
     };
 
-    if (value) {
-        return (
-            <a href={value} target="_blank" rel="noopener noreferrer" className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 flex items-center justify-center gap-1 rounded uppercase tracking-tighter hover:bg-emerald-500/30 transition-colors w-full" title="Ver Soporte">
-                Soporte
-            </a>
-        );
-    }
-
     return (
-        <div className="relative">
+        <div className="flex flex-col gap-2 min-w-[100px]">
             {isUploading ? (
                 <div className="flex items-center justify-center gap-2 text-[10px] font-black text-primary animate-pulse border border-primary/20 bg-primary/10 rounded px-2 py-1">
                     <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    UP...
+                    Subiendo...
                 </div>
             ) : (
-                <label className="cursor-pointer text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-1 rounded w-full flex items-center justify-center gap-1 uppercase tracking-tighter hover:bg-primary/30 transition-colors">
+                <label className="cursor-pointer text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-1 rounded w-full flex items-center justify-center gap-1 uppercase tracking-tighter hover:bg-primary/40 transition-all font-black">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     Subir
-                    <input type="file" className="hidden" onChange={handleUpload} accept="application/pdf,image/*" />
+                    <input type="file" className="hidden" onChange={handleUpload} accept="application/pdf,image/*" disabled={isUploading} />
                 </label>
+            )}
+
+            {value && (
+                <a 
+                    href={value} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-[9px] bg-primary/10 text-primary border border-primary/20 rounded-md px-2 py-1 flex items-center justify-center gap-1 uppercase tracking-tighter font-black hover:bg-primary/20 transition-all backdrop-blur-sm shadow-inner shadow-black/40"
+                    title="Ver Soporte en Google Drive"
+                >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    📄 Ver Soporte
+                </a>
             )}
         </div>
     );
@@ -916,10 +933,15 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         setIsSealing(true);
 
         const notes = financialEntity ? `Entidad: ${financialEntity}` : undefined;
-        const programInstruments = Object.entries(instrumentSelections).map(([program_id, instrument_id]) => ({
-            program_id,
-            instrument_id
-        }));
+        const programInstruments = Object.entries(instrumentSelections)
+            .filter(([program_id]) => {
+                const pName = programLabelMap[programSelection[program_id]] || selectedPrograms.find(p => p.id === program_id)?.program_name || '';
+                return requiresInstrumentConfig(pName);
+            })
+            .map(([program_id, instrument_id]) => ({
+                program_id,
+                instrument_id: instrument_id ? instrument_id : null
+            }));
         const programUpdates = Object.entries(programSelection)
             .map(([program_id, program_key]) => {
                 const progObj = selectedPrograms.find(p => p.id === program_id);
@@ -1506,6 +1528,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                                         value={inst.evidence_url}
                                                                         onChange={(url) => handleInstallmentUpdate(globalIndex, 'evidence_url', url)}
                                                                         studentName={`${enrollment?.student?.first_name} ${enrollment?.student?.last_name}`}
+                                                                        studentDocument={enrollment?.student?.document_number || ''}
                                                                         semester={enrollment?.semester}
                                                                         paymentTitle={`${prog.program_name} - Cuota ${inst.installment_number}`}
                                                                     />
