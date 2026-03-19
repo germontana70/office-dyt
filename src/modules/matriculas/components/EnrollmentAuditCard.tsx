@@ -232,10 +232,13 @@ function FileUploaderCell({
                 const result = await uploadPaymentEvidence(formData);
                 console.log("[DRIVE API RESPONSE]:", result);
 
-                if (result?.success && result.url) {
-                    onChange(result.url);
+                const driveLink = result?.webViewLink || result?.url;
+                console.log("URL Recibida para Píldora:", driveLink);
+
+                if (result?.success && driveLink) {
+                    onChange(driveLink);
                 } else {
-                    alert('Error subiendo archivo: ' + (result?.error || 'No se recibió URL de validación'));
+                    alert('Error subiendo archivo: ' + (result?.error || 'No se recibió URL de validación o webViewLink de Drive.'));
                 }
             } catch (err: any) {
                 console.error("[DRIVE UPLOAD EXCEPTION]:", err);

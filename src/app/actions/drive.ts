@@ -55,7 +55,7 @@ async function getOrCreateFolder(drive: any, folderName: string, parentId?: stri
 
 export async function uploadPaymentEvidence(
     formData: FormData
-): Promise<{ success: boolean; url?: string; error?: string }> {
+): Promise<{ success: boolean; url?: string; webViewLink?: string; error?: string }> {
     try {
         const file = formData.get('file') as File;
         const studentName = formData.get('studentName') as string;
@@ -113,7 +113,11 @@ export async function uploadPaymentEvidence(
         });
 
         console.log(`[DRIVE UPLOAD] Transaction SUCCESS.`);
-        return { success: true, url: uploadResponse.data.webViewLink as string };
+        return { 
+            success: true, 
+            url: uploadResponse.data.webViewLink as string,
+            webViewLink: uploadResponse.data.webViewLink as string 
+        };
 
     } catch (error: any) {
         console.error('[DRIVE UPLOAD] Critical exception:', error);
