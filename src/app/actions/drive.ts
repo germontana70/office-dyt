@@ -48,6 +48,8 @@ async function getOrCreateFolder(drive: any, folderName: string, parentId?: stri
         q: query,
         spaces: 'drive',
         fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
     });
 
     if (response.data.files && response.data.files.length > 0) {
@@ -65,6 +67,7 @@ async function getOrCreateFolder(drive: any, folderName: string, parentId?: stri
     const createResponse = await drive.files.create({
         requestBody: folderMetadata,
         fields: 'id',
+        supportsAllDrives: true,
     });
 
     return createResponse.data.id;
@@ -85,7 +88,7 @@ export async function uploadPaymentEvidence(
         }
 
         const drive = getDriveClient();
-        const MASTER_FOLDER_ID = '1IkBGA2kA8ljcEnhr9KEtglSFuYouC0sT';
+        const MASTER_FOLDER_ID = '0AKj4JRgGU-G8Uk9PVA';
 
         console.log(`[DRIVE UPLOAD] Phase 0 - Anchoring to Master Folder: ${MASTER_FOLDER_ID}`);
         console.log(`[DRIVE UPLOAD] Phase 1 - Resolving Canvas (Semester): ${semester}`);
@@ -118,6 +121,7 @@ export async function uploadPaymentEvidence(
             },
             media: media,
             fields: 'id, webViewLink',
+            supportsAllDrives: true,
         });
 
         const fileId = uploadResponse.data.id;
@@ -129,6 +133,7 @@ export async function uploadPaymentEvidence(
                 role: 'reader',
                 type: 'anyone',
             },
+            supportsAllDrives: true,
         });
 
         console.log(`[DRIVE UPLOAD] Transaction SUCCESS.`);
