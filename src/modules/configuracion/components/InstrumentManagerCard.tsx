@@ -106,89 +106,101 @@ export function InstrumentManagerCard({ initialInstruments }: InstrumentManagerC
             {/* Resplandor decorativo de fondo */}
             <div className="absolute right-[-10%] top-[-10%] w-[350px] h-[350px] bg-primary/10 rounded-full blur-[100px] pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
             
-            <div className="relative z-10 space-y-8">
+            <div className="relative z-10 space-y-10">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div>
                         <h3 className="text-[10px] font-black uppercase text-accent tracking-[0.2em] drop-shadow-md">Inventario Global</h3>
-                        <p className="text-3xl font-black mt-1 uppercase tracking-tighter drop-shadow-lg text-white italic">
-                            Instrumentos
+                        <p className="text-4xl font-black mt-1 uppercase tracking-tighter drop-shadow-lg text-white italic">
+                            Gestión de Instrumentos
                         </p>
                     </div>
                 </div>
 
-                {/* Formulario de Entrada */}
-                <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold ml-1">
-                            {editingId ? 'Editar Instrumento' : 'Nuevo Instrumento'}
-                        </label>
-                        <div className="flex gap-3">
-                            <div className="relative flex-1">
-                                <input
-                                    type="text"
-                                    placeholder="Ej. Piano Entonado, Guitarra, Violín..."
-                                    value={formName}
-                                    onChange={(e) => setFormName(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 shadow-inner focus:outline-none focus:border-accent transition-all text-sm text-white placeholder:text-white/20"
-                                />
-                                {editingId && (
-                                    <button 
-                                        onClick={cancelEdit}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
-                                    >
-                                        <X size={16} />
-                                    </button>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    {/* Columna Izquierda: Formulario (4/12) */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="space-y-4">
+                            <div className="flex flex-col gap-2 font-bold uppercase tracking-widest text-[10px] text-accent/70 ml-1">
+                                {editingId ? 'Editando Instrumento' : 'Registro de Nuevo Instrumento'}
+                            </div>
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Ej. Piano Entonado..."
+                                        value={formName}
+                                        onChange={(e) => setFormName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl py-4 px-5 shadow-2xl focus:outline-none focus:border-accent transition-all text-base text-white placeholder:text-white/20"
+                                    />
+                                    {editingId && (
+                                        <button 
+                                            onClick={cancelEdit}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors p-1"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    )}
+                                </div>
+                                <PremiumButton
+                                    onClick={handleSubmit}
+                                    disabled={isPending || !formName.trim()}
+                                    variant="primary"
+                                    size="lg"
+                                    className="w-full"
+                                >
+                                    {isPending ? (
+                                        <Loader2 className="animate-spin" size={20} />
+                                    ) : editingId ? (
+                                        'Actualizar Datos'
+                                    ) : (
+                                        <><Plus size={20} className="mr-2" /> Registrar Instrumento</>
+                                    )}
+                                </PremiumButton>
+
+                                {status && (
+                                    <div className={`flex items-center gap-3 text-[11px] font-black uppercase tracking-widest p-4 rounded-xl ${
+                                        status.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                    } animate-in fade-in slide-in-from-top-2 duration-300`}>
+                                        {status.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                                        {status.text}
+                                    </div>
                                 )}
                             </div>
-                            <PremiumButton
-                                onClick={handleSubmit}
-                                disabled={isPending || !formName.trim()}
-                                variant="primary"
-                                size="md"
-                                className="!h-[46px] min-w-[120px]"
-                            >
-                                {isPending ? (
-                                    <Loader2 className="animate-spin" size={18} />
-                                ) : editingId ? (
-                                    'Guardar'
-                                ) : (
-                                    <><Plus size={18} className="mr-2" /> Añadir</>
-                                )}
-                            </PremiumButton>
+                        </div>
+
+                        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+                            <h5 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-3">Guía Técnica</h5>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                Los instrumentos creados aquí estarán disponibles globalmente en el selector de programas para todas las matrículas, sin distinción de semestre.
+                            </p>
                         </div>
                     </div>
 
-                    {status && (
-                        <div className={`flex items-center gap-2 text-[11px] font-black uppercase tracking-widest p-2 rounded-lg ${
-                            status.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        } animate-in fade-in slide-in-from-left-2 duration-300`}>
-                            {status.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                            {status.text}
+                    {/* Columna Derecha: Catálogo (8/12) */}
+                    <div className="lg:col-span-8 space-y-6">
+                        <div className="flex items-center justify-between ml-1">
+                            <h4 className="text-[10px] text-accent/70 uppercase tracking-widest font-black">Catálogo Activo</h4>
+                            <span className="text-[10px] text-muted-foreground font-bold">{instruments.length} TOTAL</span>
                         </div>
-                    )}
-                </div>
-
-                {/* Listado de Instrumentos (Scrollable area) */}
-                <div className="space-y-4">
-                    <h4 className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold ml-1">Catálogo Actual</h4>
-                    <div className="flex flex-wrap gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar content-start">
-                        {instruments.length === 0 && !isPending && (
-                            <div className="w-full py-10 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl bg-white/[0.02]">
-                                <p className="text-[10px] text-white/20 uppercase tracking-widest font-black">No hay instrumentos registrados</p>
-                            </div>
-                        )}
                         
-                        {instruments.map((inst) => (
-                            <div
-                                key={inst.id}
-                                className={`group/pill pl-4 pr-2 py-2 rounded-xl text-[12px] font-bold uppercase tracking-wider border transition-all flex items-center gap-3 backdrop-blur-sm hover:bg-white/5 ${
-                                    inst.is_active 
-                                    ? 'bg-primary/10 text-white border-primary/30 hover:border-accent/40' 
-                                    : 'bg-white/5 text-white/40 border-white/5 line-through decoration-white/30'
-                                } ${editingId === inst.id ? 'ring-2 ring-accent border-accent/50' : ''}`}
-                            >
+                        <div className="flex flex-wrap gap-3 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar content-start">
+                            {instruments.length === 0 && !isPending && (
+                                <div className="w-full py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
+                                    <p className="text-[10px] text-white/20 uppercase tracking-widest font-black">El catálogo está vacío</p>
+                                </div>
+                            )}
+                            
+                            {instruments.map((inst) => (
+                                <div
+                                    key={inst.id}
+                                    className={`group/pill pl-5 pr-3 py-3 rounded-2xl text-[13px] font-bold uppercase tracking-wider border transition-all flex items-center gap-4 backdrop-blur-xl ${
+                                        inst.is_active 
+                                        ? 'bg-primary/5 text-white border-primary/20 hover:border-accent/40' 
+                                        : 'bg-white/5 text-white/40 border-white/5 line-through decoration-white/30'
+                                    } ${editingId === inst.id ? 'ring-2 ring-accent border-accent/50 bg-accent/5' : ''} hover:bg-white/5`}
+                                >
                                 <button
                                     onClick={() => handleToggleStatus(inst.id, inst.is_active)}
                                     disabled={isPending}
@@ -222,8 +234,9 @@ export function InstrumentManagerCard({ initialInstruments }: InstrumentManagerC
                     </div>
                 </div>
             </div>
+        </div>
 
-            <style jsx>{`
+        <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 4px;
                 }
