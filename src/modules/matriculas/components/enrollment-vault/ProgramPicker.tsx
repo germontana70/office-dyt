@@ -34,7 +34,10 @@ export function ProgramPicker({ programs, selectedPrograms, onChange }: ProgramP
         }
     };
 
-    const formatCurrency = (val: number) => val.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    const formatCurrency = (val: number) => {
+        const n = Math.round(Number(val) || 0);
+        return '$ ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
 
     return (
         <GlassCard className="p-6 border-violet-500/10 relative overflow-hidden group">

@@ -39,7 +39,10 @@ export function EnrollmentForm({ globalSettings, currentSemester, students, inst
         setFormValues(prev => ({ ...prev, [field]: value }));
     };
 
-    const formatCurrency = (val: number) => val.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    const formatCurrency = (val: number) => {
+        const n = Math.round(Number(val) || 0);
+        return '$ ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
 
     const totalGlobal = (formValues.enrollment_fee_enabled ? (globalSettings?.enrollment_fee || 0) : 0) + 
                         (formValues.tshirt_quantity * (globalSettings?.tshirt_fee || 0));

@@ -1,0 +1,24 @@
+
+> office-dyt@1.0.0 build
+> next build
+
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 7.6s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/dashboard/auditoria/pagos-historicos/page.tsx:9:9
+Type error: Variable 'auditData' implicitly has type 'any[]' in some locations where its type cannot be determined.
+
+   7 |
+   8 | export default async function AuditPagosHistoricosPage() {
+>  9 |     let auditData = [];
+     |         ^
+  10 |     
+  11 |     try {
+  12 |         // Obtenemos los datos desde la Server Action en el servidor
+Next.js build worker exited with code: 1 and signal: null

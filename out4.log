@@ -1,0 +1,50 @@
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 7.6s
+  Running TypeScript ...
+  Collecting page data using 31 workers ...
+  Generating static pages using 31 workers (0/7) ...
+[Action Error] Fallo al obtener nombre de semestre activo: Error: Dynamic server usage: Route /dashboard couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at d (C:\Users\Usuario\OneDrive\Documents\Antigravity Proyectos\office-dyt\.next\server\chunks\ssr\_55a3e8b4._.js:1:120)
+    at c.getActive (C:\Users\Usuario\OneDrive\Documents\Antigravity Proyectos\office-dyt\.next\server\chunks\ssr\_55a3e8b4._.js:1:912)
+    at f (C:\Users\Usuario\OneDrive\Documents\Antigravity Proyectos\office-dyt\.next\server\chunks\ssr\[root-of-the-server]__9ee8cfcc._.js:2:824)
+    at k (C:\Users\Usuario\OneDrive\Documents\Antigravity Proyectos\office-dyt\.next\server\chunks\ssr\_195a7d6d._.js:1:10617) {
+  description: "Route /dashboard couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+  Generating static pages using 31 workers (1/7) 
+  Generating static pages using 31 workers (3/7) 
+  Generating static pages using 31 workers (5/7) 
+Ô£ô Generating static pages using 31 workers (7/7) in 437.7ms
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /auth
+Ôö£ ãÆ /dashboard
+Ôö£ ãÆ /dashboard/audit-finance
+Ôö£ ãÆ /dashboard/audit-finance/legalize
+Ôö£ ãÆ /dashboard/auditoria/historico
+Ôö£ ãÆ /dashboard/auditoria/json-mapper
+Ôö£ ãÆ /dashboard/auditoria/pagos-historicos
+Ôö£ ãÆ /dashboard/configuracion
+Ôö£ ãÆ /dashboard/configuracion/precios
+Ôö£ ãÆ /dashboard/debug-vault
+Ôö£ ãÆ /dashboard/maestros
+Ôö£ ãÆ /dashboard/matriculas
+Ôö£ ãÆ /dashboard/matriculas/[studentId]
+Ôö£ ãÆ /dashboard/matriculas/[studentId]/edit
+Ôö£ ãÆ /dashboard/matriculas/nueva
+Ôö£ ãÆ /dashboard/payments
+Ôöö ãÆ /dashboard/programacion
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

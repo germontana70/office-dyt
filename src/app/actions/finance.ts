@@ -256,6 +256,14 @@ export async function sealPaymentPlan(input: {
     try {
         const supabase = await createClient();
 
+        // Sanitización Estricta de UUIDs para evitar Type Mismatch en PostgreSQL
+        const sanitizeUUID = (val: any) => {
+            if (!val) return null;
+            const str = String(val).trim();
+            if (str === '' || str.toLowerCase() === 'null' || str.toLowerCase() === 'undefined' || str.toLowerCase() === 'none') return null;
+            return str;
+        };
+
         const { data: plan, error: planError } = await supabase
             .from('dyt_payment_plans')
             .select('id, enrollment_id')
@@ -292,6 +300,7 @@ export async function sealPaymentPlan(input: {
             status = 'paid';
         }
 
+        const installmentsArray = input.installments_details || [];
         const { data: updatedPlan, error: updateError } = await supabase
             .from('dyt_payment_plans')
             .update({
@@ -301,7 +310,8 @@ export async function sealPaymentPlan(input: {
                 total_amount: input.total_amount,
                 plan_type: input.plan_type,
                 start_date: input.start_date || null,
-                installments_details: input.installments_details || [],
+                installments_details: installmentsArray,
+                number_of_installments: installmentsArray.length || 1,
                 discount_percentage: input.discount_percentage || 0,
                 status,
                 updated_at: new Date().toISOString()
@@ -315,17 +325,25 @@ export async function sealPaymentPlan(input: {
             return { success: false, error: 'Error al actualizar el plan de pago.' };
         }
 
+        const programInstrumentsMap = new Map();
         if (input.program_instruments && input.program_instruments.length > 0) {
             for (const entry of input.program_instruments) {
+                programInstrumentsMap.set(entry.program_id, entry.instrument_id);
+                
+                // Evitamos que un ID provisional crasheé la transacción en PG
+                if (entry.program_id.startsWith('new-')) continue;
+
+                const sanitizedInstrument = sanitizeUUID(entry.instrument_id);
+
                 const { error: programUpdateError } = await supabase
                     .from('dyt_enrollment_programs')
-                    .update({ instrument_id: entry.instrument_id })
+                    .update({ instrument_id: sanitizedInstrument })
                     .eq('id', entry.program_id)
                     .eq('enrollment_id', plan.enrollment_id);
 
                 if (programUpdateError) {
-                    console.error('[FINANCE SEAL] Error actualizando instrumento:', programUpdateError);
-                    return { success: false, error: 'Error al actualizar instrumento del programa.' };
+                    console.error('[FINANCE SEAL] Error actualizando instrumento:', JSON.stringify(programUpdateError));
+                    return { success: false, error: `Error al actualizar instrumento del programa. PG: ${programUpdateError.message || programUpdateError.code || JSON.stringify(programUpdateError)}` };
                 }
             }
         }
@@ -348,20 +366,30 @@ export async function sealPaymentPlan(input: {
 
                 const updatePayload: Record<string, any> = { program_name: entry.program_name };
                 if (entry.group_class_id !== undefined) {
-                    updatePayload.group_class_id = entry.group_class_id;
+                    updatePayload.group_class_id = sanitizeUUID(entry.group_class_id);
                 }
                 if (entry.teacher_id !== undefined) {
-                    updatePayload.teacher_id = entry.teacher_id;
+                    updatePayload.teacher_id = sanitizeUUID(entry.teacher_id);
                 }
-                if (entry.schedules !== undefined) {
-                    updatePayload.schedules = entry.schedules;
-                }
-                if (entry.observations !== undefined) {
-                    updatePayload.observations = entry.observations;
+                
+                // Mapeo Completo de Horarios (hasta 3 slots: day, time, room, duration)
+                const schedules = entry.schedules || [];
+                for (let i = 0; i < 3; i++) {
+                    const slot = schedules[i];
+                    const suffix = `_${i + 1}`;
+                    updatePayload[`day${suffix}`] = slot?.day || null;
+                    updatePayload[`time${suffix}`] = slot?.startTime || null;
+                    updatePayload[`room${suffix}`] = slot?.room || null;
+                    updatePayload[`duration${suffix}`] = slot?.duration || null;
                 }
 
                 if (entry.isNew) {
                     updatePayload.enrollment_id = plan.enrollment_id;
+                    const instrumentIdRaw = programInstrumentsMap.get(entry.program_id);
+                    if (instrumentIdRaw !== undefined) {
+                        updatePayload.instrument_id = sanitizeUUID(instrumentIdRaw);
+                    }
+                    
                     const { error: insertError } = await supabase
                         .from('dyt_enrollment_programs')
                         .insert(updatePayload);
@@ -411,6 +439,120 @@ export async function sealPaymentPlan(input: {
         return { success: true, data: { plan: updatedPlan as PaymentPlanRow, transaction } };
     } catch (error: any) {
         console.error('[FINANCE SEAL] Error inesperado:', error);
+        return { success: false, error: error?.message || 'Error inesperado.' };
+    }
+}
+
+/**
+ * Reconcilia los pagos migrados en dyt_transactions con el cronograma
+ * de installments_details en dyt_payment_plans. Útil para estudiantes
+ * cuyas cuotas fueron sincronizadas desde el módulo de Auditoría.
+ */
+export async function reconcileTransactionsToPaymentPlan(enrollmentId: string) {
+    try {
+        const supabase = await createClient();
+
+        // 1. Buscar el plan de pago del enrollment
+        const { data: plan, error: planError } = await supabase
+            .from('dyt_payment_plans')
+            .select('id, number_of_installments, total_amount')
+            .eq('enrollment_id', enrollmentId)
+            .maybeSingle();
+
+        if (planError || !plan) {
+            return { success: false, error: 'No se encontró un plan de pago para esta matrícula.' };
+        }
+
+        // 2. Leer las transacciones de dyt_transactions para este enrollment
+        const { data: transactions, error: txError } = await supabase
+            .from('dyt_transactions')
+            .select('id, payment_date, amount_paid, payment_method, bank_entity, reference_number, concept')
+            .eq('enrollment_id', enrollmentId)
+            .order('payment_date', { ascending: true });
+
+        if (txError) {
+            return { success: false, error: 'Error leyendo transacciones.' };
+        }
+
+        if (!transactions || transactions.length === 0) {
+            return { success: false, error: 'No hay transacciones registradas para este enrollment.' };
+        }
+
+        // 3. Obtener el primer programa de la matrícula para asociar los pagos (para que sean visibles en UI)
+        const { data: programs } = await supabase
+            .from('dyt_enrollment_programs')
+            .select('id')
+            .eq('enrollment_id', enrollmentId)
+            .limit(1);
+        
+        const firstProgramId = programs && programs.length > 0 ? programs[0].id : null;
+
+        // 4. Construir el array de installments_details a partir de las transacciones respetando cuotas pactadas
+        const txs = transactions || [];
+        const targetLength = Math.max(Number(plan.number_of_installments) || 0, txs.length);
+
+        const installmentsDetails = Array.from({ length: targetLength }).map((_, index) => {
+            const tx = txs[index];
+            if (tx) {
+                return {
+                    installment_number: index + 1,
+                    amount_due: Number(tx.amount_paid) || 0, // En reconciliación, lo pactado es lo pagado
+                    amount_paid: Number(tx.amount_paid) || 0,
+                    projected_date: tx.payment_date || null, // Usar la fecha real como proyectada si es reconciliado
+                    payment_date: tx.payment_date || null,
+                    payment_method: tx.payment_method || null,
+                    entity: tx.bank_entity || null,          // UI espera 'entity'
+                    reference: tx.reference_number || null,   // UI espera 'reference'
+                    concept: tx.concept || null,
+                    transaction_id: tx.id,
+                    program_id: firstProgramId // Vincular para visibilidad en UI
+                };
+            } else {
+                return {
+                    installment_number: index + 1,
+                    amount_due: 0,
+                    amount_paid: 0,
+                    projected_date: null,
+                    payment_date: null,
+                    payment_method: null,
+                    entity: null,
+                    reference: null,
+                    concept: null,
+                    transaction_id: null,
+                    program_id: firstProgramId
+                };
+            }
+        });
+
+        const totalPaid = installmentsDetails.reduce((sum, i) => sum + i.amount_paid, 0);
+        const totalAmount = Number(plan.total_amount) || 0;
+        const newStatus = totalPaid >= totalAmount ? 'paid' : totalPaid > 0 ? 'partial' : 'pending';
+
+        // 4. Actualizar el plan con los installments_details reales y la cantidad pactada conservada
+        const { error: updateError } = await supabase
+            .from('dyt_payment_plans')
+            .update({
+                installments_details: installmentsDetails,
+                number_of_installments: targetLength,
+                plan_type: targetLength > 1 ? 'cuotas' : 'contado',
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', plan.id);
+
+        if (updateError) {
+            return { success: false, error: 'Error actualizando el plan de pago: ' + updateError.message };
+        }
+
+        return {
+            success: true,
+            data: {
+                installmentsReconciled: installmentsDetails.length,
+                totalPaid,
+                status: newStatus
+            }
+        };
+    } catch (error: any) {
         return { success: false, error: error?.message || 'Error inesperado.' };
     }
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { addDays, addMonths, format } from 'date-fns';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
-import { initializePaymentPlan, sealPaymentPlan } from '@/app/actions/finance';
+import { initializePaymentPlan, reconcileTransactionsToPaymentPlan, sealPaymentPlan } from '@/app/actions/finance';
 import { syncProgramNames } from '@/app/actions/audit-finance';
 import { getGlobalSettings, getInstruments, getProgramPricesBySemester, getGroupClassesBySemester, getTeachers } from '@/app/actions/settings';
 import { uploadStudentPhoto } from '@/modules/matriculas/actions/upload-student-photo';
@@ -301,6 +301,8 @@ const requiresInstrumentConfig = (name: string) => {
 export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     if (!enrollment) return null;
 
+    const [isReconciling, setIsReconciling] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, startUploadTransition] = useTransition();
     const [isDragging, setIsDragging] = useState(false);
@@ -415,8 +417,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         if (file) await uploadPhoto(file);
     };
 
-    const formatCurrency = (val: number) =>
-        val.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    const formatCurrency = (val: number) => {
+        const n = Math.round(Number(val) || 0);
+        return '$ ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
 
     const [paymentPlan, setPaymentPlan] = useState<any>(null);
     const [showReceipt, setShowReceipt] = useState(false);
@@ -475,14 +479,34 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const [programError, setProgramError] = useState<string | null>(null);
     const [programRetryKey, setProgramRetryKey] = useState(0);
     const [selectedPrograms, setSelectedPrograms] = useState<any[]>(() => {
-        return (enrollment?.programs || []).map((prog: any) => ({
-            ...prog,
-            schedules: prog.schedules?.length ? prog.schedules : (prog.day_1 ? [{ id: `sch-init-${prog.id}`, day: prog.day_1, startTime: prog.time_1 || '15:00', duration: '60 min', room: 'SALÓN 201' }] : [{ id: `sch-init-${prog.id}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }]),
-            observations: prog.observations || '',
-            installmentsCount: 1,
-            firstPaymentDate: format(new Date(), 'yyyy-MM-dd'),
-            discount: 0
-        }));
+        return (enrollment?.programs || []).map((prog: any) => {
+            // Reconstruir horarios desde columnas DB (day_1..3, time_1..3, room_1..3, duration_1..3)
+            const dbSchedules: any[] = [];
+            for (let i = 1; i <= 3; i++) {
+                const day = prog[`day_${i}`];
+                if (day) {
+                    dbSchedules.push({
+                        id: `sch-db-${prog.id}-${i}`,
+                        day,
+                        startTime: prog[`time_${i}`] || '15:00',
+                        duration: prog[`duration_${i}`] || '60 min',
+                        room: prog[`room_${i}`] || 'SALÓN 201'
+                    });
+                }
+            }
+            const schedules = dbSchedules.length > 0
+                ? dbSchedules
+                : [{ id: `sch-init-${prog.id}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }];
+
+            return {
+                ...prog,
+                schedules,
+                observations: prog.observations || '',
+                installmentsCount: 1,
+                firstPaymentDate: format(new Date(), 'yyyy-MM-dd'),
+                discount: 0
+            };
+        });
     });
     const [deletedPrograms, setDeletedPrograms] = useState<Set<string>>(new Set());
     const programRequestIdRef = useRef(0);
@@ -529,7 +553,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     useEffect(() => {
         if (!selectedPrograms) return;
-        const nextSelections: Record<string, string> = { ...programSelection };
+        const nextSelections: Record<string, string> = { ...instrumentSelections };
         const nextGroupSelections: Record<string, string> = { ...groupClassSelections };
         const nextTeacherSelections: Record<string, string> = { ...teacherSelections };
         for (const program of selectedPrograms) {
@@ -816,6 +840,29 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
 
 
+    const handleReconcile = async () => {
+        if (!enrollment?.id) return;
+        
+        const confirmMsg = "¿Deseas sincronizar los pagos registrados en Auditoría con este Plan de Pago? Esto actualizará el cronograma basándose en las transacciones reales encontradas.";
+        if (!confirm(confirmMsg)) return;
+
+        setIsReconciling(true);
+        try {
+            const result = await reconcileTransactionsToPaymentPlan(enrollment.id);
+            if (result.success && result.data) {
+                alert(`¡Sincronización Exitosa! Se han reconciliado ${result.data.installmentsReconciled} cuotas.`);
+                // Forzar recarga ligera o mensaje para que el usuario sepa que debe refrescar
+                window.location.reload();
+            } else {
+                alert('Error al reconciliar: ' + (result.error || 'No se recibieron datos de confirmación.'));
+            }
+        } catch (err: any) {
+            alert('Error inesperado: ' + err.message);
+        } finally {
+            setIsReconciling(false);
+        }
+    };
+
     const programNeedsInstrument = (programName: string) => getProgramCategory(programName) === '1a1';
 
     const handleProgramChange = async (programId: string, programKey: string) => {
@@ -858,8 +905,18 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 const cash = pricing?.cash || 0;
                 const increment = pricing?.increment || 0;
                 const n = clampInstallments(prog.installmentsCount);
-                const [year, month, day] = prog.firstPaymentDate.split('-');
-                const baseDate = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
+                // Validación robusta de fecha de inicio
+                const firstDateRaw = String(prog.firstPaymentDate || '').trim() || format(new Date(), 'yyyy-MM-dd');
+                const dateParts = firstDateRaw.split('-');
+                const year = Number(dateParts[0]) || 2026;
+                const month = Number(dateParts[1]) || 1;
+                const day = Number(dateParts[2]) || 1;
+                
+                let baseDate = new Date(year, month - 1, day, 12, 0, 0);
+                if (isNaN(baseDate.getTime())) {
+                    baseDate = new Date();
+                    baseDate.setHours(12, 0, 0, 0);
+                }
                 const discountFactor = 1 - (prog.discount / 100);
 
                 const discountedCash = cash * discountFactor;
@@ -1561,7 +1618,20 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                         ✓ ESTUDIANTE A PAZ Y SALVO
                                     </div>
                                 ) : (
-                                    <p className="text-[10px] font-black text-yellow-500/50 uppercase tracking-[0.2em]">Monitor de Cartera</p>
+                                    <div className="flex items-center gap-4">
+                                        <p className="text-[10px] font-black text-yellow-500/50 uppercase tracking-[0.2em]">Monitor de Cartera</p>
+                                        <button
+                                            onClick={handleReconcile}
+                                            disabled={isReconciling}
+                                            className="px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 text-[9px] font-black uppercase tracking-tighter rounded-full border border-emerald-500/30 flex items-center gap-2 transition-all disabled:opacity-50"
+                                            title="Sincronizar pagos desde Auditoría de Pagos Históricos"
+                                        >
+                                            <svg className={`w-3 h-3 ${isReconciling ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            {isReconciling ? 'Sincronizando...' : 'Sincronizar Pagos'}
+                                        </button>
+                                    </div>
                                 )}
                                 <p className="text-[11px] font-bold text-white/70">
                                     {isPending ? 'Procesando auditoría...' : isPazYSalvo ? 'Operación liquidada correctamente.' : 'Pendiente de recaudo para cierre.'}
@@ -1797,10 +1867,22 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
                             {/* BLOQUE 3: TABLA DE CUOTAS (PRECISIÓN CONTABLE) */}
                             <div className="space-y-6 mb-8 printable-content">
-                                <h3 className="text-[12px] font-black uppercase text-purple-900 tracking-widest flex items-center gap-3">
-                                    <div className="h-[2px] w-8 bg-purple-900"></div>
-                                    Cronograma de Pagos y Liquidación del Semestre
-                                </h3>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-[12px] font-black uppercase text-purple-900 tracking-widest flex items-center gap-3">
+                                        <div className="h-[2px] w-8 bg-purple-900"></div>
+                                        Cronograma de Pagos y Liquidación del Semestre
+                                    </h3>
+                                    <button
+                                        onClick={handleReconcile}
+                                        disabled={isReconciling}
+                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-tighter rounded-lg shadow-lg shadow-emerald-900/20 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-emerald-400/30"
+                                    >
+                                        <svg className={`w-3 h-3 ${isReconciling ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        {isReconciling ? 'Sincronizando...' : 'Sincronizar Pagos desde Auditoría'}
+                                    </button>
+                                </div>
 
                                 <table className="w-full text-left text-[12px] border-collapse" style={{ tableLayout: 'fixed' }}>
                                     <thead>

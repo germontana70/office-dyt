@@ -1,0 +1,14 @@
+
+> office-dyt@1.0.0 dev
+> next dev
+
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.27.240.1:3000
+- Environments: .env.local
+
+Ô£ô Starting...
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+Ô£ô Ready in 1180ms
+ GET / 307 in 836ms (compile: 598ms, render: 239ms)
+ GET /dashboard 200 in 2.3s (compile: 183ms, proxy.ts: 315ms, render: 1803ms)

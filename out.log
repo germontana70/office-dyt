@@ -1,0 +1,32 @@
+
+> office-dyt@1.0.0 build
+> next build
+
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./src/app/actions/audit-legacy-payments.ts:71:14
+Ecmascript file had an error
+  69 |  * Parsea moneda en formato Latino (ej. $ 400.000,00 -> 400000).
+  70 |  */
+> 71 | export const parseLatinCurrency = (rawString: string): number => {
+     |              ^^^^^^^^^^^^^^^^^^
+  72 |     if (!rawString) return 0;
+  73 |     const sanitized = rawString
+  74 |         .replace(/\$/g, '')
+
+Server Actions must be async functions.
+
+
+Import trace:
+  Server Component:
+    ./src/app/actions/audit-legacy-payments.ts
+    ./src/app/dashboard/auditoria/pagos-historicos/page.tsx
+
+
+    at <unknown> (./src/app/actions/audit-legacy-payments.ts:71:14)

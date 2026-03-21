@@ -21,7 +21,10 @@ interface GlobalCostsSectionProps {
 }
 
 export function GlobalCostsSection({ settings, values, onChange }: GlobalCostsSectionProps) {
-    const formatCurrency = (val: number) => val.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+    const formatCurrency = (val: number) => {
+        const n = Math.round(Number(val) || 0);
+        return '$ ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
 
     const tshirtSizes = ['N/A', '2', '4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL'];
     const paymentMethods = ['Efectivo', 'Transferencia', 'Nequi/Daviplata', 'Tarjeta Crédito', 'Tarjeta Débito'];
