@@ -43,7 +43,7 @@ export function TeacherGrid({ initialTeachers }: { initialTeachers: Teacher[] })
                     <h3 className="text-xl font-black uppercase tracking-widest text-muted-foreground mb-2">No hay maestros {filter}</h3>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="flex flex-col w-full gap-3">
                     {filteredTeachers.map(teacher => (
                         <TeacherGridCard key={teacher.id} teacher={teacher} />
                     ))}

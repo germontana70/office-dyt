@@ -6,7 +6,8 @@ import { addDays, addMonths, format } from 'date-fns';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { initializePaymentPlan, reconcileTransactionsToPaymentPlan, sealPaymentPlan } from '@/app/actions/finance';
 import { syncProgramNames } from '@/app/actions/audit-finance';
-import { getGlobalSettings, getInstruments, getProgramPricesBySemester, getGroupClassesBySemester, getTeachers } from '@/app/actions/settings';
+import { getGlobalSettings, getInstruments, getProgramPricesBySemester, getTeachers } from '@/app/actions/settings';
+import { getGroupClassesBySemester } from '@/app/actions/group-classes';
 import { uploadStudentPhoto } from '@/modules/matriculas/actions/upload-student-photo';
 import { uploadPaymentEvidence } from '@/app/actions/drive';
 import Image from 'next/image';
@@ -1360,7 +1361,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                         value={groupClassSelections[prog.id] || ''}
                                                         options={groupClasses.map((cls) => ({
                                                             key: cls.id,
-                                                            label: `${cls.name} - ${cls.schedule_day} ${cls.schedule_time} (${cls.teacher_name || 'Sin maestro'})`
+                                                            label: `${cls.name} - ${cls.day_of_week || ''} ${cls.start_time || ''} (${cls.teachers?.name || 'Sin maestro'})`
                                                         }))}
                                                         onChange={(value) =>
                                                             setGroupClassSelections((prev) => ({
