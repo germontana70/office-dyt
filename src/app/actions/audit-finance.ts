@@ -200,3 +200,59 @@ export async function refreshAuditData(formData: FormData) {
         return { success: false, error: error?.message || 'Error inesperado.' };
     }
 }
+
+export async function saveProgramDataPartial(input: {
+    program_id: string;
+    enrollment_id: string;
+    teacher_id?: string | null;
+    schedules?: any[];
+    observations?: string;
+}) {
+    try {
+        const supabase = await createClient();
+        
+        // Evitamos crashear si el programa aún es temporal
+        if (input.program_id.startsWith('new-')) {
+            return { success: false, error: 'Asigna un programa válido antes de guardar configuraciones.' };
+        }
+
+        const sanitizeUUID = (val: any) => {
+            if (!val) return null;
+            const str = String(val).trim();
+            if (str === '' || str.toLowerCase() === 'null' || str.toLowerCase() === 'none') return null;
+            return str;
+        };
+
+        const updatePayload: Record<string, any> = {};
+        if (input.teacher_id !== undefined) updatePayload.teacher_id = sanitizeUUID(input.teacher_id);
+        if (input.observations !== undefined) updatePayload.observations = input.observations;
+
+        if (input.schedules) {
+            for (let i = 0; i < 3; i++) {
+                const slot = input.schedules[i];
+                const suffix = `_${i + 1}`;
+                updatePayload[`day${suffix}`] = slot?.day || null;
+                updatePayload[`time${suffix}`] = slot?.startTime || null;
+                updatePayload[`duration${suffix}`] = slot?.duration || null;
+                updatePayload[`room${suffix}`] = slot?.room || null;
+            }
+        }
+
+        const { error: updateError } = await supabase
+            .from('dyt_enrollment_programs')
+            .update(updatePayload)
+            .eq('id', input.program_id)
+            .eq('enrollment_id', input.enrollment_id);
+
+        if (updateError) {
+            console.error('[PROGRAM PARTIAL SAVE] Error:', updateError);
+            return { success: false, error: 'No se pudieron guardar los datos del programa.' };
+        }
+
+        revalidatePath('/dashboard/matriculas');
+        return { success: true };
+    } catch (error: any) {
+        console.error('[PROGRAM PARTIAL SAVE] Excepción:', error);
+        return { success: false, error: error?.message || 'Error inesperado al guardar datos.' };
+    }
+}

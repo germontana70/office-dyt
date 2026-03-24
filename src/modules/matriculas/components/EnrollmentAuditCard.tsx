@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { addDays, addMonths, format } from 'date-fns';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { initializePaymentPlan, reconcileTransactionsToPaymentPlan, sealPaymentPlan } from '@/app/actions/finance';
-import { syncProgramNames } from '@/app/actions/audit-finance';
+import { syncProgramNames, saveProgramDataPartial } from '@/app/actions/audit-finance';
 import { getGlobalSettings, getInstruments, getProgramPricesBySemester, getTeachers } from '@/app/actions/settings';
 import { getGroupClassesBySemester } from '@/app/actions/group-classes';
 import { uploadStudentPhoto } from '@/modules/matriculas/actions/upload-student-photo';
@@ -1098,6 +1098,48 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         }
     };
 
+    const [savingProgramId, setSavingProgramId] = useState<string | null>(null);
+
+    const handleSaveProgramData = async (prog: any) => {
+        if (!enrollment?.id || !prog.id) return;
+        if (prog.id.startsWith('new-')) {
+            alert('Aún se está procesando el registro base de este programa. Por favor espera unos segundos.');
+            return;
+        }
+
+        setSavingProgramId(prog.id);
+        try {
+            const payload = {
+                program_id: prog.id,
+                enrollment_id: enrollment.id,
+                teacher_id: teacherSelections[prog.id] || null,
+                schedules: prog.schedules || [],
+                observations: prog.observations || ''
+            };
+
+            const result = await saveProgramDataPartial(payload);
+            if (result.success) {
+                // UI feedback visual
+                const btn = document.getElementById(`save-btn-${prog.id}`);
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '¡Guardado ✅!';
+                    btn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30');
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30');
+                    }, 2000);
+                }
+            } else {
+                alert(result.error || 'Problema guardando configuración puntual.');
+            }
+        } catch (err: any) {
+            alert('Excepción al guardar datos del programa: ' + err.message);
+        } finally {
+            setSavingProgramId(null);
+        }
+    };
+
     // Motor Matemático Descentralizado por Programa
     useEffect(() => {
         if (!selectedPrograms) return;
@@ -1564,6 +1606,29 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                         placeholder="Instrucciones especiales para el maestro, consideraciones..."
                                                         className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-primary font-mono min-h-[80px]"
                                                     />
+                                                    <div className="flex justify-end pt-2">
+                                                        <button
+                                                            id={`save-btn-${prog.id}`}
+                                                            type="button"
+                                                            onClick={() => handleSaveProgramData(prog)}
+                                                            disabled={savingProgramId === prog.id || prog.id.startsWith('new-')}
+                                                            className="text-[10px] font-black uppercase text-cyan-400 border border-cyan-400/30 bg-cyan-400/10 hover:bg-cyan-400/20 px-5 py-2.5 rounded-xl transition-all tracking-widest flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {savingProgramId === prog.id ? (
+                                                                <>
+                                                                    <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                                                                    Guardando...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                                                    </svg>
+                                                                    Guardar Programación
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ) : (
