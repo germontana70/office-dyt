@@ -60,10 +60,10 @@ export default async function ConfiguracionPage() {
                                 {activeSemester?.sheet_url && (
                                     <div className="p-6 bg-black/60 backdrop-blur-xl rounded-2xl border border-white/5 shadow-2xl max-w-md w-full group/sheet relative overflow-hidden">
                                         <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover/sheet:opacity-100 transition-opacity pointer-events-none" />
-                                        <p className="text-[10px] text-accent/70 uppercase tracking-widest font-black mb-3 flex items-center gap-2">
+                                        <div className="text-[10px] text-accent/70 uppercase tracking-widest font-black mb-3 flex items-center gap-2">
                                             <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
                                             Google Sheet Vinculado (Sincronización)
-                                        </p>
+                                        </div>
                                         <a href={activeSemester.sheet_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary-foreground hover:text-accent font-mono truncate block transition-colors relative z-10 underline decoration-primary-foreground/20 underline-offset-4">
                                             {activeSemester.sheet_url.slice(0, 60)}...
                                         </a>

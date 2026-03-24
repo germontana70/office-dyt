@@ -70,44 +70,27 @@ export async function getInstruments() {
 export async function getProgramPricesBySemester(semester: string) {
     const supabase = await createClient();
 
-    console.log('[FINANCE] Semestre enviado a la query:', semester);
+    console.log('[FINANCE] Semestre solicitado:', semester);
 
     try {
         const { data: dytPrices, error: dytPricesError } = await supabase
             .from('dyt_program_prices')
-            .select('program_name, valor_contado, increment_percentage, total_financed, installments, semester')
-            .eq('semester', semester);
+            // Seleccionamos las columnas correctas de la nueva bóveda
+            .select('id, program_name, cash_price, increment_percentage, installments, semester')
+            .eq('semester', '2026-1'); // HARDCODED REQUIREMENT PARA INDEPENDENCIA
 
         console.log('[FINANCE] Programas recibidos (dyt_program_prices):', dytPrices);
+
         if (dytPricesError) {
-            console.error('Error fetching dyt program prices:', dytPricesError);
+            console.error('[FINANCE ERROR] Error fetching dyt program prices:', dytPricesError);
+            return { data: [], error: dytPricesError.message, source: 'dyt_program_prices' };
         }
 
-        if (!dytPricesError && dytPrices && dytPrices.length > 0) {
-            return { data: dytPrices, error: null, source: 'dyt_program_prices' };
-        }
+        return { data: dytPrices || [], error: null, source: 'dyt_program_prices' };
     } catch (error: any) {
-        // Continue to legacy if dyt_program_prices fails
-    }
-
-    try {
-        const { data: legacyPrices, error: legacyPricesError } = await supabase
-            .from('program_prices')
-            .select('program_name, cash_price, increment_percentage, installments, semester')
-            .eq('semester', semester);
-
-        console.log('[FINANCE] Programas recibidos (program_prices):', legacyPrices);
-
-        if (legacyPricesError) {
-            console.error('Error fetching program prices:', legacyPricesError);
-            return { data: [], error: legacyPricesError.message, source: 'program_prices' };
-        }
-
-        return { data: legacyPrices || [], error: null, source: 'program_prices' };
-    } catch (error: any) {
-        const message = error?.message || 'Error desconocido consultando program_prices';
-        console.error('Error fetching program prices (exception):', message);
-        return { data: [], error: message, source: 'program_prices' };
+        const message = error?.message || 'Error fatal consultando dyt_program_prices';
+        console.error('[FINANCE CRASH] Exception:', message);
+        return { data: [], error: message, source: 'dyt_program_prices' };
     }
 }
 

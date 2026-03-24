@@ -94,7 +94,7 @@ export async function initializePaymentPlan(enrollmentId: string) {
         if (programNames.length > 0) {
             let priceRows: ProgramPriceRow[] = [];
 
-            // 1. Intentar buscar en la tabla moderna dyt_program_prices
+            // 1. Leer EXCLUSIVAMENTE de la tabla moderna dyt_program_prices
             const { data: dytPrices, error: dytPricesError } = await supabase
                 .from('dyt_program_prices')
                 .select('*')
@@ -102,23 +102,10 @@ export async function initializePaymentPlan(enrollmentId: string) {
 
             if (dytPricesError) {
                 console.error('[FINANCE INIT] Supabase Error Real en dyt_program_prices:', dytPricesError);
+                return { success: false, error: 'Error consultando precios de programa.' };
             }
 
-            if (!dytPricesError && dytPrices && dytPrices.length > 0) {
-                priceRows = dytPrices as ProgramPriceRow[];
-            } else {
-                // 2. Fallback a la tabla legacy program_prices
-                const { data: legacyPrices, error: legacyPricesError } = await supabase
-                    .from('program_prices')
-                    .select('*')
-                    .eq('semester', enrollment.semester);
-
-                if (legacyPricesError) {
-                    console.error('[FINANCE INIT] Supabase Error Real en program_prices:', legacyPricesError);
-                    return { success: false, error: 'Error consultando precios de programa.' };
-                }
-                priceRows = (legacyPrices || []) as ProgramPriceRow[];
-            }
+            priceRows = (dytPrices || []) as ProgramPriceRow[];
 
             const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
 

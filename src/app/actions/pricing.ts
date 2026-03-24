@@ -20,7 +20,7 @@ export async function updatePricingVault(prices: ProgramPrice[], semester: strin
 
     // 1. Obtener registros existentes para este semestre para mapear IDs reales
     const { data: existingRecords } = await supabase
-        .from('program_prices')
+        .from('dyt_program_prices')
         .select('id, program_name')
         .eq('semester', currentSemesterStr);
 
@@ -70,11 +70,9 @@ export async function updatePricingVault(prices: ProgramPrice[], semester: strin
         return {
             id: targetId,
             semester: currentSemesterStr,
-            year: yearNumber,
             program_name: pName,
             cash_price: cash_price,
             increment_percentage: increment_percentage,
-            total_financed: realTotal,
             installments: installments
         };
     });
@@ -82,11 +80,11 @@ export async function updatePricingVault(prices: ProgramPrice[], semester: strin
     console.log("PAYLOAD SENT TO SUPABASE:", JSON.stringify(pricesToUpsert, null, 2));
 
     const { error } = await supabase
-        .from('program_prices')
-        .upsert(pricesToUpsert, { onConflict: 'id' });
+        .from('dyt_program_prices')
+        .upsert(pricesToUpsert, { onConflict: 'program_name, semester' });
 
     if (error) {
-        console.error("SUPABASE ERROR DETAILS:", error);
+        console.error("[PRICING SAVE ERROR]:", error);
         return { success: false, error: 'Hubo un error al guardar los precios.' };
     }
 
