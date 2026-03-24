@@ -86,13 +86,20 @@ export const CurrentStudentSchema = z.object({
     contract_number: emptyToNull,
     guardian_relationship: emptyToNull,
 
-    // Fase 2: Programas y Horarios
-    program: emptyToNull,
-    instrument: emptyToNull,
-    teacher: emptyToNull,
-    class_day: emptyToNull,
-    class_time: emptyToNull,
-    observations: emptyToNull,
+    // Fase 2: Programas y Horarios (DEPRECATED - JSONB GHOST)
+    /** @deprecated Legacy scalar column - Usar tabla dyt_enrollment_programs */
+    program: z.any().optional().catch(null),
+    /** @deprecated Legacy scalar column - Usar tabla dyt_enrollment_programs */
+    instrument: z.any().optional().catch(null),
+    /** @deprecated Legacy scalar column - Usar tabla dyt_enrollment_programs */
+    teacher: z.any().optional().catch(null),
+    /** @deprecated Legacy scalar column - Usar tabla dyt_enrollment_programs */
+    class_day: z.any().optional().catch(null),
+    /** @deprecated Legacy scalar column - Usar tabla dyt_enrollment_programs */
+    class_time: z.any().optional().catch(null),
+    /** @deprecated Legacy scalar column - Usar tabla dyt_enrollments.global_observations */
+    observations: z.any().optional().catch(null),
+    /** @deprecated Legacy JSONB array - Usar tabla dyt_enrollment_programs */
     programs: z.any().optional(),
 
     // Fase 3: Gestión Financiera

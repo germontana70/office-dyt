@@ -103,3 +103,58 @@ export async function saveNewEnrollment(payload: z.infer<typeof NewEnrollmentSch
         return { success: false, error: 'Error del servidor al registrar la matrícula.' };
     }
 }
+
+export async function getActiveEnrollmentPrograms(studentId: string, semester: string = '2026-1') {
+    const supabase = await createClient();
+    
+    const { data: enrollment, error: enrollmentError } = await supabase
+        .from('dyt_enrollments')
+        .select('id, global_observations')
+        .eq('student_id', studentId)
+        .eq('semester', semester)
+        .single();
+        
+    if (enrollmentError || !enrollment) {
+        return { success: false, data: [] };
+    }
+    
+    const { data: programs, error: progError } = await supabase
+        .from('dyt_enrollment_programs')
+        .select('*')
+        .eq('enrollment_id', enrollment.id)
+        .order('created_at', { ascending: true });
+        
+    if (progError) {
+        return { success: false, data: [] };
+    }
+    
+    return { success: true, enrollmentId: enrollment.id, globalObservations: enrollment.global_observations, data: programs || [] };
+}
+
+export async function updateEnrollmentProgramDetails(programId: string, updates: any) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from('dyt_enrollment_programs')
+        .update(updates)
+        .eq('id', programId);
+        
+    if (error) {
+        console.error('[ENROLLMENT] Update program details error:', error);
+        return { success: false, error: 'Error al actualizar detalles.' };
+    }
+    return { success: true };
+}
+
+export async function updateEnrollmentGlobalObservations(enrollmentId: string, observations: string) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from('dyt_enrollments')
+        .update({ global_observations: observations })
+        .eq('id', enrollmentId);
+        
+    if (error) {
+        console.error('[ENROLLMENT] Update observations error:', error);
+        return { success: false, error: 'Error al actualizar observaciones.' };
+    }
+    return { success: true };
+}
