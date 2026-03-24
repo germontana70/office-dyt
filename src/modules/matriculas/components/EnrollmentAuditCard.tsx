@@ -1099,6 +1099,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     };
 
     const [savingProgramId, setSavingProgramId] = useState<string | null>(null);
+    const [successProgramId, setSuccessProgramId] = useState<string | null>(null);
 
     const handleSaveProgramData = async (prog: any) => {
         if (!enrollment?.id || !prog.id) return;
@@ -1119,17 +1120,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
             const result = await saveProgramDataPartial(payload);
             if (result.success) {
-                // UI feedback visual
-                const btn = document.getElementById(`save-btn-${prog.id}`);
-                if (btn) {
-                    const originalText = btn.innerHTML;
-                    btn.innerHTML = '¡Guardado ✅!';
-                    btn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30');
-                    setTimeout(() => {
-                        btn.innerHTML = originalText;
-                        btn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30');
-                    }, 2000);
-                }
+                setSuccessProgramId(prog.id);
+                setTimeout(() => setSuccessProgramId(null), 2000);
             } else {
                 alert(result.error || 'Problema guardando configuración puntual.');
             }
@@ -1611,10 +1603,16 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                             id={`save-btn-${prog.id}`}
                                                             type="button"
                                                             onClick={() => handleSaveProgramData(prog)}
-                                                            disabled={savingProgramId === prog.id || prog.id.startsWith('new-')}
-                                                            className="text-[10px] font-black uppercase text-cyan-400 border border-cyan-400/30 bg-cyan-400/10 hover:bg-cyan-400/20 px-5 py-2.5 rounded-xl transition-all tracking-widest flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            disabled={savingProgramId === prog.id || prog.id.startsWith('new-') || successProgramId === prog.id}
+                                                            className={`text-[10px] font-black uppercase border px-5 py-2.5 rounded-xl transition-all tracking-widest flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                                successProgramId === prog.id 
+                                                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                                                    : 'text-cyan-400 border-cyan-400/30 bg-cyan-400/10 hover:bg-cyan-400/20'
+                                                            }`}
                                                         >
-                                                            {savingProgramId === prog.id ? (
+                                                            {successProgramId === prog.id ? (
+                                                                <>¡Guardado ✅!</>
+                                                            ) : savingProgramId === prog.id ? (
                                                                 <>
                                                                     <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                                                                     Guardando...
