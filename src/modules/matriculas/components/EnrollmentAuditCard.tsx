@@ -221,7 +221,7 @@ function FloatingSearchSelect({
     const filteredOptions = options.filter(opt => 
         opt.label.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    const selectedLabel = options.find((opt) => opt.key === value)?.label || '';
+    const selectedLabel = options.find((opt) => opt.key === value || opt.label === value)?.label || value || '';
 
     return (
         <>
@@ -717,7 +717,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             const [instList, groupList, teachersList] = await Promise.all([
                 getInstruments(),
                 getGroupClassesBySemester(enrollment?.semester),
-                getTeachers(enrollment?.semester)
+                getTeachers()
             ]);
             setInstruments(instList);
             setGroupClasses(groupList);
