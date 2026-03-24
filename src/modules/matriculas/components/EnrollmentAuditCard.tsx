@@ -510,9 +510,23 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         });
     });
     const [deletedPrograms, setDeletedPrograms] = useState<Set<string>>(new Set());
-    const programRequestIdRef = useRef(0);
+    const [installmentsConfig, setInstallmentsConfig] = useState<Record<string, { count: number, discount: number, firstPaymentDate: string }>>({});
+    const pendingInsertsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
+        if (!enrollment?.programs) return;
+        const config: Record<string, any> = {};
+        enrollment.programs.forEach((prog: any) => {
+            config[prog.id] = {
+                count: 1,
+                discount: 0,
+                firstPaymentDate: format(new Date(), 'yyyy-MM-dd')
+            };
+        });
+        setInstallmentsConfig(config);
+    }, [enrollment?.programs]);
+
+    const programRequestIdRef = useRef(0);    useEffect(() => {
         if (!enrollment?.id) return;
 
         startTransition(async () => {
@@ -529,18 +543,23 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     const hydratedPlansRef = useRef<Set<string>>(new Set());
 
-    // Sincronizar estado con el plan de pago cargado - SOLO UNA VEZ por plan para no sobreescribir la UI
+    // Sincronizar estado con el plan de pago cargado - SOLO UNA VEZ por plan
     useEffect(() => {
         if (paymentPlan?.id && selectedPrograms.length > 0 && !hydratedPlansRef.current.has(paymentPlan.id)) {
-            setSelectedPrograms(prev => prev.map(prog => ({
-                ...prog,
-                discount: paymentPlan.discount_percentage ? Number(paymentPlan.discount_percentage) : prog.discount,
-                installmentsCount: paymentPlan.number_of_installments ? Number(paymentPlan.number_of_installments) : prog.installmentsCount,
-                firstPaymentDate: paymentPlan.start_date ? paymentPlan.start_date : prog.firstPaymentDate
-            })));
+            setInstallmentsConfig(prev => {
+                const next = { ...prev };
+                selectedPrograms.forEach(prog => {
+                    next[prog.id] = {
+                        count: paymentPlan.number_of_installments ? Number(paymentPlan.number_of_installments) : (prev[prog.id]?.count || 1),
+                        discount: paymentPlan.discount_percentage ? Number(paymentPlan.discount_percentage) : (prev[prog.id]?.discount || 0),
+                        firstPaymentDate: paymentPlan.start_date ? paymentPlan.start_date : (prev[prog.id]?.firstPaymentDate || format(new Date(), 'yyyy-MM-dd'))
+                    };
+                });
+                return next;
+            });
             hydratedPlansRef.current.add(paymentPlan.id);
         }
-    }, [paymentPlan]);
+    }, [paymentPlan, selectedPrograms.length]);
 
     useEffect(() => {
         startTransition(async () => {
@@ -773,9 +792,11 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             const pricing = programPrices[key];
             const cash = pricing?.cash || 0;
             const increment = (pricing?.increment !== undefined && pricing?.increment !== null) ? pricing.increment : 0;
-            const discountFactor = 1 - (program.discount / 100);
+            
+            const config = installmentsConfig[program.id] || { count: 1, discount: 0 };
+            const discountFactor = 1 - (config.discount / 100);
             const discountedCash = cash * discountFactor;
-            const n = clampInstallments(program.installmentsCount);
+            const n = clampInstallments(config.count);
 
             let price = discountedCash;
             if (n > 1) {
@@ -826,7 +847,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const scholarshipAmount = (() => {
         return selectedPrograms.reduce((sum: number, p: any) => {
             const key = programSelection[p.id] || normalizeProgramKey(p.program_name || '');
-            return sum + ((programPrices[key]?.cash || 0) * (p.discount / 100));
+            const config = installmentsConfig[p.id] || { discount: 0 };
+            return sum + ((programPrices[key]?.cash || 0) * (config.discount / 100));
         }, 0);
     })();
     const enrollmentFeeValue = includeEnrollmentFee ? globalFees.enrollment_fee : 0;
@@ -840,7 +862,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
     // Es Paz y Salvo si hay programas y lo pagado iguala (o supera) lo acordado (incluye $0)
     const isPazYSalvo = selectedPrograms.length > 0 && totalPaid >= totalAmount;
-    const isFullCash = selectedPrograms.every(p => p.installmentsCount === 1);
+    const isFullCash = selectedPrograms.every((p: any) => (installmentsConfig[p.id]?.count || 1) === 1);
 
 
 
@@ -870,6 +892,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const programNeedsInstrument = (programName: string) => getProgramCategory(programName) === '1a1';
 
     const handleProgramChange = async (programId: string, programKey: string) => {
+        if (pendingInsertsRef.current.has(programId)) return;
+
         // Optimistic local update for maximum fluency
         setProgramSelection((prev) => ({
             ...prev,
@@ -885,6 +909,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         if (enrollment?.id) formData.append('enrollmentId', enrollment.id);
 
         try {
+            if (programId.startsWith('new-')) {
+                pendingInsertsRef.current.add(programId);
+            }
+
             const result = await syncProgramNames(formData);
             if (result?.success) {
                 setProgramError(null);
@@ -899,12 +927,23 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         delete next[programId];
                         return next;
                     });
+                    setInstallmentsConfig(prev => {
+                        const next = { ...prev };
+                        if (next[programId]) {
+                            next[result.newProgramId] = { ...next[programId] };
+                            delete next[programId];
+                        }
+                        return next;
+                    });
+                    pendingInsertsRef.current.delete(programId);
                 }
             } else if (result?.error) {
                 console.error('[PROGRAM SYNC] Error persistiendo programa:', result.error);
+                pendingInsertsRef.current.delete(programId);
             }
         } catch (err) {
             console.error('[PROGRAM SYNC] Critical exception during sync:', err);
+            pendingInsertsRef.current.delete(programId);
         }
     };
 
@@ -921,9 +960,11 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 const pricing = programPrices[key];
                 const cash = pricing?.cash || 0;
                 const increment = pricing?.increment || 0;
-                const n = clampInstallments(prog.installmentsCount);
+
+                const config = installmentsConfig[prog.id] || { count: 1, discount: 0, firstPaymentDate: format(new Date(), 'yyyy-MM-dd') };
+                const n = clampInstallments(config.count);
                 // Validación robusta de fecha de inicio
-                const firstDateRaw = String(prog.firstPaymentDate || '').trim() || format(new Date(), 'yyyy-MM-dd');
+                const firstDateRaw = String(config.firstPaymentDate || '').trim() || format(new Date(), 'yyyy-MM-dd');
                 const dateParts = firstDateRaw.split('-');
                 const year = Number(dateParts[0]) || 2026;
                 const month = Number(dateParts[1]) || 1;
@@ -934,7 +975,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                     baseDate = new Date();
                     baseDate.setHours(12, 0, 0, 0);
                 }
-                const discountFactor = 1 - (prog.discount / 100);
+                const discountFactor = 1 - (config.discount / 100);
 
                 const discountedCash = cash * discountFactor;
                 let programAmount = n > 1 
@@ -952,42 +993,49 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         academicPart = programAmount - (academicBase * (n - 1));
                     }
 
-                    let amount_due = academicPart;
+                    let amount_due = existing.amount_due !== undefined ? existing.amount_due : academicPart;
+                    let projected_date_val = existing.projected_date || format(projectedDate, 'yyyy-MM-dd');
+                    
                     let concept = n === 1 ? 'Contado' : `Cuota ${i+1}/${n}`;
                     const breakdown: any[] = [{ label: 'Cuota Académica', value: academicPart }];
 
                     if (i === 0 && isFirstProgramOverall) {
                         if (enrollmentFeeValue > 0) {
-                            amount_due += enrollmentFeeValue;
+                            if (existing.amount_due === undefined) amount_due += enrollmentFeeValue;
                             breakdown.push({ label: 'Inscripción', value: enrollmentFeeValue });
                         }
                         if (uniformFeeValue > 0) {
-                            amount_due += uniformFeeValue;
+                            if (existing.amount_due === undefined) amount_due += uniformFeeValue;
                             breakdown.push({ label: 'Camiseta', value: uniformFeeValue });
                         }
                     }
 
                     newDetails.push({
+                        ...existing,
                         program_id: prog.id,
                         installment_number: i + 1,
-                        projected_date: format(projectedDate, 'yyyy-MM-dd'),
+                        projected_date: projected_date_val,
                         amount_due,
                         amount_paid: existing.amount_paid || 0,
                         payment_date: existing.payment_date || null,
                         reference: existing.reference || '',
                         entity: existing.entity || '',
-                        concept: i === 0 && isFirstProgramOverall && (enrollmentFeeValue > 0 || uniformFeeValue > 0) 
+                        concept: existing.concept || (i === 0 && isFirstProgramOverall && (enrollmentFeeValue > 0 || uniformFeeValue > 0) 
                             ? `${concept} + Cargos` 
-                            : concept,
+                            : concept),
                         evidence_url: existing.evidence_url || null,
-                        breakdown
+                        breakdown: existing.breakdown || breakdown
                     });
                 }
                 isFirstProgramOverall = false;
+
+                // Conservar cuotas extra que el usuario haya agregado manualmente
+                const manualExtras = prevDetails.filter((d: any) => d.program_id === prog.id && d.installment_number > n);
+                newDetails.push(...manualExtras);
             });
             return newDetails;
         });
-    }, [selectedPrograms, programSelection, programPrices, enrollmentFeeValue, uniformFeeValue]);
+    }, [selectedPrograms, programSelection, programPrices, installmentsConfig, enrollmentFeeValue, uniformFeeValue]);
 
     useEffect(() => {
         if (paymentPlan?.installments_details && paymentPlan.installments_details.length > 0) {
@@ -1050,16 +1098,16 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             enrollment_fee: enrollmentFeeValue,
             uniform_fee: uniformFeeValue,
             total_amount: totalAmount,
-            plan_type: selectedPrograms[0]?.installmentsCount > 1 ? 'cuotas' : 'contado',
+            plan_type: Object.values(installmentsConfig).some(c => c.count > 1) ? 'cuotas' : 'contado',
             initial_payment: 0,
             payment_method: 'N/A',
             reference_code: '',
             notes,
-            start_date: selectedPrograms[0]?.firstPaymentDate,
+            start_date: selectedPrograms[0] ? installmentsConfig[selectedPrograms[0].id]?.firstPaymentDate : undefined,
             installments_details: installmentsDetails,
             program_instruments: programInstruments,
             program_updates: programUpdates,
-            discount_percentage: selectedPrograms[0]?.discount // Trazabilidad de Auditoría
+            discount_percentage: selectedPrograms[0] ? installmentsConfig[selectedPrograms[0].id]?.discount : 0 // Trazabilidad de Auditoría
         });
 
         if (result?.success) {
@@ -1427,8 +1475,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                 </label>
                                                 <input
                                                     type="date"
-                                                    value={prog.firstPaymentDate}
-                                                    onChange={(e) => setSelectedPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, firstPaymentDate: e.target.value } : p))}
+                                                    value={installmentsConfig[prog.id]?.firstPaymentDate || format(new Date(), 'yyyy-MM-dd')}
+                                                    onChange={(e) => setInstallmentsConfig(prev => ({ ...prev, [prog.id]: { ...(prev[prog.id] || { count: 1, discount: 0 }), firstPaymentDate: e.target.value } }))}
                                                     className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:border-primary focus:outline-none"
                                                 />
                                             </div>
@@ -1438,8 +1486,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                     Numero de Cuotas
                                                 </label>
                                                 <select
-                                                    value={clampInstallments(prog.installmentsCount)}
-                                                    onChange={(e) => setSelectedPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, installmentsCount: Number(e.target.value) } : p))}
+                                                    value={clampInstallments(installmentsConfig[prog.id]?.count || 1)}
+                                                    onChange={(e) => setInstallmentsConfig(prev => ({ ...prev, [prog.id]: { ...(prev[prog.id] || { discount: 0, firstPaymentDate: format(new Date(), 'yyyy-MM-dd') }), count: Number(e.target.value) } }))}
                                                     className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary focus:outline-none"
                                                 >
                                                     {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -1456,7 +1504,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                         Beca / Descuento Hum.
                                                     </label>
                                                     <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black">
-                                                        {prog.discount}%
+                                                        {installmentsConfig[prog.id]?.discount || 0}%
                                                     </span>
                                                 </div>
                                                 <input
@@ -1464,8 +1512,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                     min="0"
                                                     max="100"
                                                     step="5"
-                                                    value={prog.discount}
-                                                    onChange={(e) => setSelectedPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, discount: Number(e.target.value) } : p))}
+                                                    value={installmentsConfig[prog.id]?.discount || 0}
+                                                    onChange={(e) => setInstallmentsConfig(prev => ({ ...prev, [prog.id]: { ...(prev[prog.id] || { count: 1, firstPaymentDate: format(new Date(), 'yyyy-MM-dd') }), discount: Number(e.target.value) } }))}
                                                     className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-primary"
                                                 />
                                                 <div className="flex justify-between text-[8px] text-white/20 uppercase font-black">
@@ -1481,7 +1529,11 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
                             {selectedPrograms && selectedPrograms.length < 8 && (
                                 <button
-                                    onClick={() => setSelectedPrograms(prev => [...prev, { id: `new-${Date.now()}`, program_name: '', schedules: [{ id: `sch-${Date.now()}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }], observations: '', installmentsCount: 1, firstPaymentDate: format(new Date(), 'yyyy-MM-dd'), discount: 0 }])}
+                                    onClick={() => {
+                                        const newId = `new-${Date.now()}`;
+                                        setSelectedPrograms(prev => [...prev, { id: newId, program_name: '', schedules: [{ id: `sch-${Date.now()}`, day: 'Lunes', startTime: '15:00', duration: '60 min', room: 'SALÓN 201' }], observations: '' }]);
+                                        setInstallmentsConfig(prev => ({ ...prev, [newId]: { count: 1, discount: 0, firstPaymentDate: format(new Date(), 'yyyy-MM-dd') } }));
+                                    }}
                                     className="w-full py-4 rounded-xl border-2 border-dashed border-primary/40 bg-primary/10 text-primary font-black uppercase tracking-widest hover:bg-primary/20 hover:border-primary/80 transition-all flex items-center justify-center gap-2 mt-2 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]"
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
