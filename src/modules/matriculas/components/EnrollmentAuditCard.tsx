@@ -154,6 +154,153 @@ function FloatingSelect({
     );
 }
 
+function FloatingSearchSelect({
+    value,
+    options,
+    onChange,
+    placeholder = 'Buscar y Seleccionar...',
+    loadingLabel = 'Cargando...',
+    disabled = false
+}: FloatingSelectProps) {
+    const triggerRef = useRef<HTMLButtonElement | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const [rect, setRect] = useState<DOMRect | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!open) {
+            setSearchTerm(''); // Reset on close
+            return;
+        }
+        if (triggerRef.current) {
+            setRect(triggerRef.current.getBoundingClientRect());
+            // autofocus on timeout to ensure portal is mounted
+            setTimeout(() => inputRef.current?.focus(), 50);
+        }
+
+        const handleReposition = () => {
+            if (triggerRef.current) {
+                setRect(triggerRef.current.getBoundingClientRect());
+            }
+        };
+
+        const handlePointerDown = (event: MouseEvent) => {
+            const target = event.target as Node;
+            if (triggerRef.current?.contains(target)) return;
+            if (menuRef.current?.contains(target)) return;
+            setOpen(false);
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        };
+
+        handleReposition();
+        document.addEventListener('mousedown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('scroll', handleReposition, true);
+        window.addEventListener('resize', handleReposition);
+
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('scroll', handleReposition, true);
+            window.removeEventListener('resize', handleReposition);
+        };
+    }, [open]);
+
+    const filteredOptions = options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const selectedLabel = options.find((opt) => opt.key === value)?.label || '';
+
+    return (
+        <>
+            <button
+                type="button"
+                ref={triggerRef}
+                disabled={disabled}
+                onClick={() => setOpen((prev) => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                className="w-full bg-black/60 backdrop-blur-md border border-white/10 dark:border-primary/30 rounded-xl px-3 py-2 text-[12px] text-white font-bold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary/30 flex items-center justify-between gap-3 transition-all"
+            >
+                <span className="truncate text-current">{selectedLabel || placeholder}</span>
+                <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {mounted && open && rect &&
+                createPortal(
+                    <>
+                        <button
+                            type="button"
+                            aria-hidden="true"
+                            onClick={() => setOpen(false)}
+                            className="fixed inset-0 z-[9998] cursor-default bg-transparent"
+                        />
+                        <div
+                            ref={menuRef}
+                            className="bg-black/95 border border-primary/40 rounded-xl shadow-2xl flex flex-col z-[9999] backdrop-blur-xl overflow-hidden"
+                            style={{
+                                position: 'fixed',
+                                top: rect.bottom + 6,
+                                left: rect.left,
+                                width: rect.width,
+                                zIndex: 9999
+                            }}
+                        >
+                            <div className="p-2 border-b border-white/10">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Buscar maestro..."
+                                    className="w-full bg-white/5 border border-white/10 text-white text-[12px] px-3 py-1.5 rounded-lg focus:outline-none focus:border-primary/50"
+                                />
+                            </div>
+                            <div role="listbox" className="max-h-52 overflow-y-auto">
+                                {options.length === 0 ? (
+                                    <div className="px-4 py-3 text-[11px] text-white/60">{loadingLabel}</div>
+                                ) : filteredOptions.length === 0 ? (
+                                    <div className="px-4 py-3 text-[11px] text-white/60 italic">Sin resultados</div>
+                                ) : (
+                                    filteredOptions.map((opt) => (
+                                        <button
+                                            key={opt.key}
+                                            role="option"
+                                            aria-selected={opt.key === value}
+                                            type="button"
+                                            onClick={() => {
+                                                onChange(opt.key);
+                                                setOpen(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-[12px] text-white hover:bg-white/5 dark:hover:bg-primary/20 transition-colors"
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </>,
+                    document.body
+                )}
+        </>
+    );
+}
+
 function MaskedCurrencyInput({
     value,
     onChange,
@@ -570,7 +717,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             const [instList, groupList, teachersList] = await Promise.all([
                 getInstruments(),
                 getGroupClassesBySemester(enrollment?.semester),
-                getTeachers()
+                getTeachers(enrollment?.semester)
             ]);
             setInstruments(instList);
             setGroupClasses(groupList);
@@ -1340,19 +1487,19 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                         <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">
                                                             Maestro Asignado
                                                         </p>
-                                                        <FloatingSelect
+                                                        <FloatingSearchSelect
                                                             value={teacherSelections[prog.id] || ''}
                                                             options={teachers.map((t) => ({
                                                                 key: t.id,
                                                                 label: t.name
                                                             }))}
                                                             onChange={(value) =>
-                                                                setTeacherSelections((prev) => ({
+                                                                setTeacherSelections((prev: any) => ({
                                                                     ...prev,
                                                                     [prog.id]: value
                                                                 }))
                                                             }
-                                                            placeholder="Vincular maestro..."
+                                                            placeholder="Buscar maestro..."
                                                             loadingLabel="Cargando..."
                                                         />
                                                     </div>

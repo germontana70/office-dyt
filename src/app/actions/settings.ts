@@ -3,12 +3,17 @@
 import { createClient } from '@/infra/services/server';
 import { revalidatePath } from 'next/cache';
 
-export async function getTeachers() {
+export async function getTeachers(semester?: string) {
+    if (!semester) {
+        console.warn('[FINANCE WARNING] getTeachers was called without a semester. Escaping to return empty array to prevent data leakage.');
+        return [];
+    }
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('teachers')
         .select('*')
         .eq('is_active', true)
+        .eq('semester', semester)
         .order('name', { ascending: true });
 
     if (error) {
