@@ -225,7 +225,6 @@ export async function saveProgramDataPartial(input: {
 
         const updatePayload: Record<string, any> = {};
         if (input.teacher_id !== undefined) updatePayload.teacher_id = sanitizeUUID(input.teacher_id);
-        if (input.observations !== undefined) updatePayload.observations = input.observations;
 
         if (input.schedules) {
             for (let i = 0; i < 3; i++) {
@@ -245,8 +244,8 @@ export async function saveProgramDataPartial(input: {
             .eq('enrollment_id', input.enrollment_id);
 
         if (updateError) {
-            console.error('[PROGRAM PARTIAL SAVE] Error:', updateError);
-            return { success: false, error: 'No se pudieron guardar los datos del programa.' };
+            console.error('[PROGRAM PARTIAL SAVE] Error Supabase:', updateError);
+            return { success: false, error: updateError.message || JSON.stringify(updateError) };
         }
 
         revalidatePath('/dashboard/matriculas');
