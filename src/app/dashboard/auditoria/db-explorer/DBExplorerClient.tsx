@@ -60,12 +60,13 @@ export function DBExplorerClient() {
         setData(rawData);
         setTotalCount(result.totalCount || 0);
 
-        // Analyze columns if first time or table changed
+        // Analyze columns if first time or table has changed
         if (rawData.length > 0) {
           const keys = Object.keys(rawData[0]);
-          setAllColumns(keys);
           
-          if (tableName !== selectedTable || allColumns.length === 0) {
+          // Only reset columns if the dataset structure changed (or first load)
+          if (keys.join(',') !== allColumns.join(',')) {
+             setAllColumns(keys);
              if (keys.length > 8) {
                 // Select only first 8 columns by default to prevent overflow
                 setSelectedColumns(new Set(keys.slice(0, 8)));
