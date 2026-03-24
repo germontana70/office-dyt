@@ -175,6 +175,28 @@ export function SidebarNav() {
                         >
                             Auditoría JSONB / Mapper
                         </Link>
+                        <Link
+                            href="/dashboard/auditoria/pagos-historicos"
+                            className={cn(
+                                "block rounded-lg px-3 py-2 text-sm transition-all duration-300",
+                                pathname === '/dashboard/auditoria/pagos-historicos'
+                                    ? "bg-emerald-400/10 text-emerald-200 border border-emerald-400/20"
+                                    : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground"
+                            )}
+                        >
+                            Pagos Históricos
+                        </Link>
+                        <Link
+                            href="/dashboard/auditoria/db-explorer"
+                            className={cn(
+                                "block rounded-lg px-3 py-2 text-sm transition-all duration-300",
+                                pathname === '/dashboard/auditoria/db-explorer'
+                                    ? "bg-emerald-400/10 text-emerald-200 border border-emerald-400/20"
+                                    : "text-muted-foreground hover:bg-emerald-400/5 hover:text-foreground"
+                            )}
+                        >
+                            Panóptico Global (BD)
+                        </Link>
                     </div>
                 )}
             </div>
