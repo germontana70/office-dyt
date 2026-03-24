@@ -8,6 +8,7 @@ export async function syncProgramNames(formData: FormData) {
     const programId = String(formData.get('programId') || '').trim();
     const targetName = String(formData.get('targetName') || '').trim();
     const semester = String(formData.get('semester') || '').trim();
+    const enrollmentId = String(formData.get('enrollmentId') || '').trim();
 
     if (!programId || !targetName || !semester) {
         return { success: false, error: 'Faltan datos para sincronizar el programa.' };
@@ -15,57 +16,88 @@ export async function syncProgramNames(formData: FormData) {
 
     try {
         const supabase = await createClient();
+        const isNew = programId.startsWith('new-');
 
-        const { data: programRow, error: programError } = await supabase
-            .from('dyt_enrollment_programs')
-            .select('id, enrollment_id, program_name')
-            .eq('id', programId)
-            .single();
+        let student_id: string | null = null;
+        let newProgramId: string | undefined;
 
-        if (programError || !programRow) {
-            console.error('[AUDIT SYNC] Error consultando programa:', programError);
-            return { success: false, error: 'No se encontro el programa en matricula.' };
+        if (isNew) {
+            if (!enrollmentId) return { success: false, error: 'Falta enrollmentId para insertar programa nuevo.' };
+            const { data: insertedProgram, error: insertError } = await supabase
+                .from('dyt_enrollment_programs')
+                .insert({ enrollment_id: enrollmentId, program_name: targetName })
+                .select('id')
+                .single();
+                
+            if (insertError) {
+                console.error('[AUDIT SYNC] Error insertando programa nuevo:', insertError);
+                return { success: false, error: 'No se pudo crear el programa nuevo.' };
+            }
+            
+            // Reemplazar programId para que luego la UI se entere
+            newProgramId = insertedProgram?.id;
+
+            // Para actualizar dyt_enrollments
+            const { data: enrollmentRow } = await supabase
+                .from('dyt_enrollments')
+                .select('student_id')
+                .eq('id', enrollmentId)
+                .single();
+            if (enrollmentRow) student_id = enrollmentRow.student_id;
+
+        } else {
+            const { data: programRow, error: programError } = await supabase
+                .from('dyt_enrollment_programs')
+                .select('id, enrollment_id, program_name')
+                .eq('id', programId)
+                .single();
+
+            if (programError || !programRow) {
+                console.error('[AUDIT SYNC] Error consultando programa:', programError);
+                return { success: false, error: 'No se encontro el programa en matricula.' };
+            }
+
+            const { data: enrollmentRow, error: enrollmentError } = await supabase
+                .from('dyt_enrollments')
+                .select('id, semester, student_id')
+                .eq('id', programRow.enrollment_id)
+                .single();
+
+            if (enrollmentError || !enrollmentRow) {
+                console.error('[AUDIT SYNC] Error consultando matricula:', enrollmentError);
+                return { success: false, error: 'No se encontro la matricula del programa.' };
+            }
+
+            if (enrollmentRow.semester !== semester) {
+                return { success: false, error: 'Semestre inconsistente para esta correccion.' };
+            }
+
+            const { error: updateError } = await supabase
+                .from('dyt_enrollment_programs')
+                .update({ program_name: targetName })
+                .eq('id', programId)
+                .eq('enrollment_id', enrollmentRow.id);
+
+            if (updateError) {
+                console.error('[AUDIT SYNC] Error actualizando programa:', updateError);
+                return { success: false, error: 'No se pudo sincronizar el nombre del programa.' };
+            }
+
+            student_id = enrollmentRow.student_id;
         }
 
-        const { data: enrollmentRow, error: enrollmentError } = await supabase
-            .from('dyt_enrollments')
-            .select('id, semester, student_id')
-            .eq('id', programRow.enrollment_id)
-            .single();
-
-        if (enrollmentError || !enrollmentRow) {
-            console.error('[AUDIT SYNC] Error consultando matricula:', enrollmentError);
-            return { success: false, error: 'No se encontro la matricula del programa.' };
-        }
-
-        if (enrollmentRow.semester !== semester) {
-            return { success: false, error: 'Semestre inconsistente para esta correccion.' };
-        }
-
-        const { error: updateError } = await supabase
-            .from('dyt_enrollment_programs')
-            .update({ program_name: targetName })
-            .eq('id', programId)
-            .eq('enrollment_id', enrollmentRow.id);
-
-        if (updateError) {
-            console.error('[AUDIT SYNC] Error actualizando programa:', updateError);
-            return { success: false, error: 'No se pudo sincronizar el nombre del programa.' };
-        }
-
-        if (enrollmentRow.student_id) {
+        if (student_id) {
             const { error: enrollmentUpdateError } = await supabase
                 .from('dyt_enrollments')
                 .update({ 
                     program_name: targetName,
                     updated_at: new Date().toISOString()
                 })
-                .eq('student_id', enrollmentRow.student_id)
+                .eq('student_id', student_id)
                 .eq('semester', semester);
 
             if (enrollmentUpdateError) {
                 console.error('[AUDIT SYNC] Error actualizando matricula (dyt_enrollments):', enrollmentUpdateError);
-                console.log('-- DETALLE ERROR:', JSON.stringify(enrollmentUpdateError, null, 2));
                 return { 
                     success: false, 
                     error: `No se pudo sincronizar la matricula: ${enrollmentUpdateError.message}` 
@@ -74,6 +106,9 @@ export async function syncProgramNames(formData: FormData) {
         }
 
         revalidatePath('/dashboard/audit-finance');
+        if (isNew && newProgramId) {
+            return { success: true, newProgramId };
+        }
         return { success: true };
     } catch (error: any) {
         console.error('[AUDIT SYNC] Error inesperado:', error);

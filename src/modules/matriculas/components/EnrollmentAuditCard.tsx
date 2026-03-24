@@ -527,15 +527,18 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         });
     }, [enrollment?.id]);
 
-    // Sincronizar estado con el plan de pago cargado
+    const hydratedPlansRef = useRef<Set<string>>(new Set());
+
+    // Sincronizar estado con el plan de pago cargado - SOLO UNA VEZ por plan para no sobreescribir la UI
     useEffect(() => {
-        if (paymentPlan && selectedPrograms.length > 0) {
+        if (paymentPlan?.id && selectedPrograms.length > 0 && !hydratedPlansRef.current.has(paymentPlan.id)) {
             setSelectedPrograms(prev => prev.map(prog => ({
                 ...prog,
                 discount: paymentPlan.discount_percentage ? Number(paymentPlan.discount_percentage) : prog.discount,
                 installmentsCount: paymentPlan.number_of_installments ? Number(paymentPlan.number_of_installments) : prog.installmentsCount,
                 firstPaymentDate: paymentPlan.start_date ? paymentPlan.start_date : prog.firstPaymentDate
             })));
+            hydratedPlansRef.current.add(paymentPlan.id);
         }
     }, [paymentPlan]);
 
@@ -879,11 +882,24 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         formData.append('programId', programId);
         formData.append('targetName', targetName);
         formData.append('semester', enrollment.semester);
+        if (enrollment?.id) formData.append('enrollmentId', enrollment.id);
 
         try {
             const result = await syncProgramNames(formData);
             if (result?.success) {
                 setProgramError(null);
+                if (result.newProgramId) {
+                    // Reemplazar el pseudo-ID por el ID real de Supabase
+                    setSelectedPrograms(prev => prev.map(p => 
+                        p.id === programId ? { ...p, id: result.newProgramId } : p
+                    ));
+                    setProgramSelection(prev => {
+                        const next = { ...prev };
+                        next[result.newProgramId] = next[programId];
+                        delete next[programId];
+                        return next;
+                    });
+                }
             } else if (result?.error) {
                 console.error('[PROGRAM SYNC] Error persistiendo programa:', result.error);
             }
