@@ -77,7 +77,7 @@ export async function getProgramPricesBySemester(semester: string) {
             .from('dyt_program_prices')
             // Seleccionamos las columnas correctas de la nueva bóveda
             .select('id, program_name, cash_price, increment_percentage, installments, semester')
-            .eq('semester', '2026-1'); // HARDCODED REQUIREMENT PARA INDEPENDENCIA
+            .eq('semester', semester);
 
         console.log('[FINANCE] Programas recibidos (dyt_program_prices):', dytPrices);
 

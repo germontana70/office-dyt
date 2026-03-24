@@ -549,10 +549,14 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             setInstallmentsConfig(prev => {
                 const next = { ...prev };
                 selectedPrograms.forEach(prog => {
+                    const progDetails = (paymentPlan.installments_details || []).filter((d: any) => d.program_id === prog.id);
+                    const realCount = progDetails.length > 0 ? progDetails.length : 1;
+                    const realFirstDate = progDetails.length > 0 ? progDetails[0].projected_date : paymentPlan.start_date;
+
                     next[prog.id] = {
-                        count: paymentPlan.number_of_installments ? Number(paymentPlan.number_of_installments) : (prev[prog.id]?.count || 1),
+                        count: realCount,
                         discount: paymentPlan.discount_percentage ? Number(paymentPlan.discount_percentage) : (prev[prog.id]?.discount || 0),
-                        firstPaymentDate: paymentPlan.start_date ? paymentPlan.start_date : (prev[prog.id]?.firstPaymentDate || format(new Date(), 'yyyy-MM-dd'))
+                        firstPaymentDate: realFirstDate || (prev[prog.id]?.firstPaymentDate || format(new Date(), 'yyyy-MM-dd'))
                     };
                 });
                 return next;
