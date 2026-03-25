@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { TeacherPaymentInfo } from '@/infra/services/payments';
 import { reportService } from '@/infra/services/reports';
 import { syncCalendarEventsAction } from '@/app/actions/sync-calendar-events';
-import { ChevronDown, ExternalLink, CreditCard, Clock, DollarSign, BookOpen } from 'lucide-react';
+import { ChevronDown, ExternalLink, CreditCard, Clock, DollarSign, BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Props {
     initialPayments: TeacherPaymentInfo[];
@@ -133,48 +133,64 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                     </p>
                 </div>
 
-                <div className="flex gap-4 items-center">
-                    <div className="flex bg-white/5 rounded-xl border border-white/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                        <button onClick={() => shiftMonth(-1)} className="px-4 py-3 hover:bg-white/10 transition-colors text-white text-sm font-bold tracking-wider border-r border-white/10">
-                            ⬅️ Mes Anterior
+                <div className="flex flex-wrap gap-4 items-center">
+                    {/* Premium Period Navigation Panel */}
+                    <div className="flex bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/5 p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
+                        <button 
+                            onClick={() => shiftMonth(-1)} 
+                            className="flex items-center gap-3 px-5 py-2.5 rounded-xl hover:bg-white/5 hover:text-primary transition-all duration-300 group/btn"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center group-hover/btn:border-primary/30 group-hover/btn:shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)] transition-all">
+                                <ArrowLeft className="w-4 h-4 text-zinc-400 group-hover/btn:text-primary transition-colors" />
+                            </div>
+                            <span className="text-sm font-bold tracking-tight text-zinc-300 group-hover/btn:text-white">Mes Anterior</span>
                         </button>
-                        <button onClick={() => shiftMonth(1)} className="px-4 py-3 hover:bg-white/10 transition-colors text-white text-sm font-bold tracking-wider">
-                            Mes Siguiente ➡️
+                        
+                        <div className="w-[1px] bg-white/5 my-2" />
+
+                        <button 
+                            onClick={() => shiftMonth(1)} 
+                            className="flex items-center gap-3 px-5 py-2.5 rounded-xl hover:bg-white/5 hover:text-primary transition-all duration-300 group/btn"
+                        >
+                            <span className="text-sm font-bold tracking-tight text-zinc-300 group-hover/btn:text-white">Mes Siguiente</span>
+                            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center group-hover/btn:border-primary/30 group-hover/btn:shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)] transition-all">
+                                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-primary transition-colors" />
+                            </div>
                         </button>
                     </div>
 
                     <div className="flex flex-col">
-                        <span className="text-[10px] text-muted-foreground uppercase absolute -mt-4 ml-2 bg-black/50 px-1 rounded">Fecha Inicio</span>
+                        <span className="text-[9px] text-muted-foreground uppercase absolute -mt-4 ml-2 bg-black/50 px-1 rounded font-bold tracking-widest border border-white/5">Desde</span>
                         <input
                             type="date"
                             value={localStart}
                             onChange={(e) => setLocalStart(e.target.value)}
-                            className="glass px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-medium hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
+                            className="glass px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-medium hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert text-sm"
                         />
                     </div>
 
                     <div className="flex flex-col">
-                        <span className="text-[10px] text-muted-foreground uppercase absolute -mt-4 ml-2 bg-black/50 px-1 rounded">Fecha Fin</span>
+                        <span className="text-[9px] text-muted-foreground uppercase absolute -mt-4 ml-2 bg-black/50 px-1 rounded font-bold tracking-widest border border-white/5">Hasta</span>
                         <input
                             type="date"
                             value={localEnd}
                             onChange={(e) => setLocalEnd(e.target.value)}
-                            className="glass px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-medium hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
+                            className="glass px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-medium hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert text-sm"
                         />
                     </div>
 
                     <button
                         onClick={handleFilterChange}
-                        className="ml-2 px-6 py-3 rounded-xl bg-primary/20 text-primary border border-primary/30 font-bold uppercase tracking-widest hover:bg-primary/30 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]"
+                        className="px-6 py-3 rounded-xl bg-white/5 text-white border border-white/10 font-bold uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95"
                     >
                         Filtrar
                     </button>
                     <button
                         onClick={handleSync}
                         disabled={isSyncing}
-                        className={`ml-2 px-6 py-3 rounded-xl ${isSyncing ? 'bg-orange-500/20 text-orange-400 border-orange-500/30 cursor-wait' : 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30 cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.2)]'} border font-bold uppercase tracking-widest transition-all`}
+                        className={`px-6 py-3 rounded-xl ${isSyncing ? 'bg-orange-500/20 text-orange-400 border-orange-500/30 cursor-wait' : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 cursor-pointer shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]'} border font-black uppercase tracking-widest text-[10px] transition-all active:scale-95`}
                     >
-                        {isSyncing ? 'Sincronizando...' : '🔄 Sincronizar'}
+                        {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
                     </button>
                 </div>
             </div>
@@ -194,7 +210,7 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                                         <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'teacherName' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key !== 'teacherName' ? 'opacity-20' : 'text-primary'}`} />
                                     </div>
                                 </th>
-                                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Programas</th>
+                                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Especialidad</th>
                                 <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                     <div className="flex items-center gap-2">
                                         <Clock className="w-3 h-3 opacity-40" />
