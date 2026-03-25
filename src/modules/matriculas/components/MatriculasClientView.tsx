@@ -18,6 +18,7 @@ import {
 import { searchStudentsHybrid, reintegrateStudentFromHistory, HybridSearchResult } from '@/app/actions/reintegrate';
 import { useRouter } from 'next/navigation';
 import { WithdrawStudentModal } from './WithdrawStudentModal';
+import { ReactivateStudentButton } from './ReactivateStudentButton';
 
 interface MatriculasClientViewProps {
     students: CurrentStudent[];
@@ -625,10 +626,16 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
                                                 {age} AÑO{age !== 1 ? 'S' : ''}{isMinor ? ' · MENOR' : ''}
                                             </span>
                                         )}
-                                        {/* Badge Semestre ACTIVO */}
-                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-primary/15 border border-primary/30 text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                                            ACTIVA · {semester}
-                                        </span>
+                                        {/* Badge Estado Matrícula — condicional */}
+                                        {selectedStudent.enrollment_status === 'Retirado' ? (
+                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-destructive/15 border border-destructive/30 text-destructive shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                                                RETIRADO · {semester}
+                                            </span>
+                                        ) : (
+                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-primary/15 border border-primary/30 text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                                                ACTIVA · {semester}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -642,6 +649,15 @@ export function MatriculasClientView({ students, semester }: MatriculasClientVie
                                     onNext={handleNext}
                                 />
                             </div>
+                            {/* Botón de Reactivar — solo visible si el estudiante está retirado */}
+                            {selectedStudent.enrollment_status === 'Retirado' && (
+                                <div className="mt-3">
+                                    <ReactivateStudentButton
+                                        studentId={selectedStudent.id!}
+                                        studentName={`${student.first_name} ${student.last_name}`}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </GlassCard>
 
