@@ -67,6 +67,6 @@ export async function withdrawStudent(studentId: string, reason?: string) {
     }
 
     // ── 4. Revalidar la UI del módulo de matrículas ──────────────────────────
-    revalidatePath('/dashboard/matriculas');
+    revalidatePath('/dashboard/matriculas', 'layout');
     return { success: true };
 }

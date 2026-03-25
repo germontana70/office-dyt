@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CurrentStudent } from '../models/student.schema';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { withdrawStudent } from '../actions/withdraw-student';
@@ -10,6 +11,7 @@ interface WithdrawStudentModalProps {
 }
 
 export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedStudentId, setSelectedStudentId] = useState('');
     const [reason, setReason] = useState('');
@@ -29,10 +31,11 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
         if (res.error) {
             alert(res.error);
         } else {
-            // Toast mock o UX
             setIsOpen(false);
             setSelectedStudentId('');
             setReason('');
+            // Forzar refetch del Server Component padre para reflejar el cambio en la UI
+            router.refresh();
         }
     };
 
