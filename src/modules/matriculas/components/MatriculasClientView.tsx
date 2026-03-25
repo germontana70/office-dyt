@@ -237,6 +237,18 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
             if (res.error) {
                 toast.error(`Error: ${res.error}`);
             } else {
+                // ── Mutación optimista local ─────────────────────────────────
+                // Actualizar el objeto en memoria para que useEffect encuentre
+                // los datos frescos si el usuario cambia de pestaña antes de
+                // que router.refresh() complete la re-hidratación del servidor.
+                student.medical_info = {
+                    medications,
+                    allergies,
+                    conditions,
+                    emergency_contact_name: emergencyName,
+                    emergency_contact_phone: emergencyPhone,
+                    emergency_contact_relationship: emergencyRelationship,
+                };
                 toast.success('Ficha médica guardada exitosamente');
                 router.refresh();
             }
