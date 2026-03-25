@@ -2,8 +2,16 @@ import { google, calendar_v3 } from 'googleapis';
 import fs from 'fs/promises';
 import path from 'path';
 
-const CREDENTIALS_PATH = path.join(process.cwd(), 'google-credentials', 'credentials.json');
-const TOKEN_PATH = path.join(process.cwd(), 'google-credentials', 'token.json');
+// ─── Service Account: multi-path resiliente (igual que drive.ts) ──────────────
+const SA_CREDENTIAL_PATHS = [
+    path.join(process.cwd(), 'credenciales', 'credenciales_robot.json'),
+    path.join(process.cwd(), 'credentials.json'),
+    path.join(process.cwd(), 'credenciales_robot.json'),
+];
+
+const CALENDAR_SCOPES = [
+    'https://www.googleapis.com/auth/calendar.readonly',
+];
 
 // Extracted from legacy SIA 2.0
 const CALENDAR_IDS: Record<string, string> = {
@@ -37,29 +45,59 @@ export interface RawGoogleEvent {
 export class GoogleCalendarService {
     private static authClient: any = null;
 
+    /**
+     * ─── Service Account Auth (Robot) ─────────────────────────────────────────
+     * Lee las credenciales del robot desde credenciales_robot.json con búsqueda
+     * multi-path resiliente. Aplica el saneamiento Regex mandatario en la
+     * private_key para reparar los saltos de línea literales (\n) que se
+     * corrompen al pasar por variables de entorno (el "Muro Criptográfico RSA").
+     */
     private static async getAuthClient() {
         if (this.authClient) return this.authClient;
 
         try {
-            const credentialsFile = await fs.readFile(CREDENTIALS_PATH, 'utf-8');
-            const credentials = JSON.parse(credentialsFile);
-            const { client_secret, client_id, redirect_uris } = credentials.web || credentials.installed;
+            // Búsqueda multi-path del archivo de credenciales del Service Account
+            let credentialsRaw: string | null = null;
+            let foundPath = '';
+            for (const candidatePath of SA_CREDENTIAL_PATHS) {
+                try {
+                    credentialsRaw = await fs.readFile(candidatePath, 'utf-8');
+                    foundPath = candidatePath;
+                    break;
+                } catch {
+                    // Continuar con el siguiente path
+                }
+            }
 
-            const oAuth2Client = new google.auth.OAuth2(
-                client_id,
-                client_secret,
-                redirect_uris && redirect_uris.length > 0 ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
-            );
+            if (!credentialsRaw) {
+                throw new Error(
+                    `No se encontró el archivo de credenciales del Service Account. Rutas intentadas: ${SA_CREDENTIAL_PATHS.join(', ')}`
+                );
+            }
 
-            const tokenFile = await fs.readFile(TOKEN_PATH, 'utf-8');
-            const token = JSON.parse(tokenFile);
-            oAuth2Client.setCredentials(token);
+            const serviceAccountKey = JSON.parse(credentialsRaw);
 
-            this.authClient = oAuth2Client;
-            return oAuth2Client;
-        } catch (error) {
-            console.error('Error initializing Google Auth Client. Are credentials missing?', error);
-            throw new Error('Google Auth Failed');
+            // ─── FÓRMULA GANADORA: Saneamiento Regex del Muro Criptográfico RSA ──
+            // Los saltos de línea literales \n en .env o JSON se deben normalizar.
+            const sanitizedPrivateKey = serviceAccountKey.private_key?.replace(/\\n/g, '\n');
+
+            console.log(`[GOOGLE CALENDAR] Autenticando Service Account desde: ${foundPath}`);
+            console.log(`[GOOGLE CALENDAR] Client Email: ${serviceAccountKey.client_email}`);
+
+            const auth = new google.auth.GoogleAuth({
+                credentials: {
+                    client_email: serviceAccountKey.client_email,
+                    private_key: sanitizedPrivateKey,
+                },
+                scopes: CALENDAR_SCOPES,
+            });
+
+            this.authClient = await auth.getClient();
+            return this.authClient;
+        } catch (error: any) {
+            // ─── FAIL-LOUD: Logging detallado para diagnóstico ───────────────────
+            console.error('[GOOGLE CALENDAR AUTH ERROR]:', error.message || error);
+            throw new Error(`Google Auth Failed: ${error.message || 'Error desconocido al inicializar Service Account'}`);
         }
     }
 
