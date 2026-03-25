@@ -34,7 +34,7 @@ export default async function MatriculasPage() {
                 </header>
 
                 {/* Módulo de Estadísticas Central */}
-                <EnrollmentStats totalStudents={students.length} semester={SEMESTER} />
+                <EnrollmentStats totalStudents={students.filter(s => s.enrollment_status === 'Activo').length} semester={SEMESTER} />
 
                 {/* Buscador Principal y Visor de Auditoría */}
                 <section>

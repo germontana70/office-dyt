@@ -13,7 +13,7 @@ export function EnrollmentStats({ totalStudents, semester }: EnrollmentStatsProp
 
             <div className="relative flex flex-col items-center justify-center space-y-4 text-center">
                 <h2 className="text-[10px] font-black text-slate-600 dark:text-muted-foreground tracking-[0.2em] uppercase">
-                    Total Estudiantes Matriculados
+                    Total Matrículas Activas
                 </h2>
 
                 <div className="flex items-baseline justify-center gap-2 py-2 px-8">
