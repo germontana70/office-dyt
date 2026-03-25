@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { TeacherPaymentInfo } from '@/infra/services/payments';
 import { reportService } from '@/infra/services/reports';
 import { syncCalendarEventsAction } from '@/app/actions/sync-calendar-events';
+import { ChevronDown, ExternalLink, CreditCard, Clock, DollarSign, BookOpen } from 'lucide-react';
 
 interface Props {
     initialPayments: TeacherPaymentInfo[];
@@ -20,6 +21,7 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
     const [localStart, setLocalStart] = useState(startDate);
     const [localEnd, setLocalEnd] = useState(endDate);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [sortConfig, setSortConfig] = useState<{ key: 'teacherName' | 'totalPayment', direction: 'asc' | 'desc' }>({ key: 'teacherName', direction: 'asc' });
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -48,6 +50,31 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
     const handleFilterChange = () => {
         router.push(`/dashboard/payments?start=${localStart}&end=${localEnd}`);
     };
+
+    const requestSort = (key: 'teacherName' | 'totalPayment') => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedPayments = [...payments].sort((a, b) => {
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            return sortConfig.direction === 'asc'
+                ? valA.localeCompare(valB)
+                : valB.localeCompare(valA);
+        }
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+        }
+
+        return 0;
+    });
 
     const shiftMonth = (direction: -1 | 1) => {
         const [yearStr, monthStr] = localEnd.split('-');
@@ -152,61 +179,107 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 </div>
             </div>
 
-            {/* Cuadrícula de Liquidación (El Lienzo) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {payments.map((p, idx) => (
-                    <div key={idx} className="glass group relative p-6 rounded-[24px] border border-white/10 bg-black/30 backdrop-blur-xl hover:bg-white/5 transition-all duration-300 overflow-hidden flex flex-col justify-between h-full">
-                        {/* Glow Effect */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-                        <div className="relative z-10 mb-6 flex-grow">
-                            <h3 className="text-xl font-bold text-white mb-1 tracking-wide">{p.teacherName}</h3>
-                            <p className="text-xs text-primary/80 font-semibold tracking-wider uppercase mb-6">{p.instrument || 'Especialidad No Def.'}</p>
-
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Horas Mes</span>
-                                    <span className="font-mono text-lg font-bold text-white">{p.totalHours}</span>
-                                </div>
-
-                                <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Tarifa Base</span>
+            {/* Tabla de Liquidación (Tipo Excel / Neon-Glass) */}
+            <div className="glass overflow-hidden border border-white/10 rounded-[24px] bg-black/30 backdrop-blur-xl mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[900px]">
+                        <thead>
+                            <tr className="border-b border-white/10 bg-white/5">
+                                <th 
+                                    onClick={() => requestSort('teacherName')}
+                                    className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-white transition-colors group"
+                                >
                                     <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground">$</span>
-                                        <input
-                                            type="number"
-                                            value={p.hourlyRate}
-                                            onChange={(e) => handleRateChange(idx, Number(e.target.value))}
-                                            className="bg-transparent border-b border-white/20 w-20 text-right text-white font-mono focus:outline-none focus:border-primary transition-colors pb-1"
-                                        />
+                                        Docente
+                                        <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'teacherName' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key !== 'teacherName' ? 'opacity-20' : 'text-primary'}`} />
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="relative z-10 pt-4 border-t border-white/10 mt-auto">
-                            <p className="text-xs text-muted-foreground tracking-widest uppercase mb-1">Total a Pagar</p>
-                            <p className="text-3xl font-bold mb-6 font-mono" style={{ color: 'hsl(var(--success, 142.1 76.2% 36.3%))', textShadow: '0 0 20px hsla(var(--success, 142.1 76.2% 36.3%), 0.4)' }}>
-                                $ {p.totalPayment.toLocaleString('es-CO')}
-                            </p>
-
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setSelectedTeacher(p)}
-                                    className="flex-1 py-3 px-4 rounded-xl border border-white/20 bg-transparent text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-colors"
+                                </th>
+                                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Programas</th>
+                                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-3 h-3 opacity-40" />
+                                        Horas Mes
+                                    </div>
+                                </th>
+                                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <DollarSign className="w-3 h-3 opacity-40" />
+                                        Tarifa Base
+                                    </div>
+                                </th>
+                                <th 
+                                    onClick={() => requestSort('totalPayment')}
+                                    className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-white transition-colors text-right"
                                 >
-                                    Detalle
-                                </button>
-                                <button
-                                    onClick={() => { }}
-                                    className="flex-1 py-3 px-4 rounded-xl bg-primary/20 text-primary border border-primary/30 text-xs font-bold uppercase tracking-widest hover:bg-primary/30 hover:scale-[1.02] transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]"
-                                >
-                                    Pagar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
+                                    <div className="flex items-center justify-end gap-2">
+                                        Total a Pagar
+                                        <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'totalPayment' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key !== 'totalPayment' ? 'opacity-20' : 'text-success'}`} />
+                                    </div>
+                                </th>
+                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {sortedPayments.map((p, idx) => {
+                                // Encontrar el índice original para el handleRateChange
+                                const originalIdx = payments.findIndex(orig => orig.teacherName === p.teacherName);
+                                
+                                return (
+                                    <tr key={idx} className="group hover:bg-white/[0.03] transition-colors">
+                                        <td className="px-8 py-5">
+                                            <div className="font-bold text-white tracking-tight">{p.teacherName}</div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2 text-primary/70 text-[10px] font-black uppercase tracking-wider bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10 w-fit">
+                                                <BookOpen className="w-3 h-3" />
+                                                {p.instrument || 'Grupales'}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="font-mono text-lg font-bold text-zinc-400 group-hover:text-white transition-colors">
+                                                {p.totalHours}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center justify-center gap-1.5 bg-black/40 border border-white/5 rounded-xl px-4 py-2 w-fit mx-auto">
+                                                <span className="text-zinc-600 font-mono text-xs">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={p.hourlyRate}
+                                                    onChange={(e) => handleRateChange(originalIdx, Number(e.target.value))}
+                                                    className="bg-transparent w-20 text-right text-white font-mono font-bold focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all text-sm rounded px-1"
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="text-xl font-bold font-mono tracking-tighter" style={{ color: 'hsl(var(--success, 142.1 76.2% 36.3%))', textShadow: '0 0 10px hsla(var(--success, 142.1 76.2% 36.3%), 0.2)' }}>
+                                                $ {p.totalPayment.toLocaleString('es-CO')}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => setSelectedTeacher(p)}
+                                                    className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all group/btn"
+                                                    title="Ver Detalle"
+                                                >
+                                                    <ExternalLink className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { }}
+                                                    className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all flex items-center justify-center group/pay"
+                                                    title="Procesar Pago"
+                                                >
+                                                    <CreditCard className="w-4 h-4 group-hover/pay:scale-110 transition-transform" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Modal de Detalle (Glassmorphism Modal) */}
