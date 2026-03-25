@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { CurrentStudent } from '../models/student.schema';
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { withdrawStudent } from '../actions/withdraw-student';
@@ -34,6 +35,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
             setIsOpen(false);
             setSelectedStudentId('');
             setReason('');
+            toast.success("Estudiante retirado del semestre exitosamente");
             // Forzar refetch del Server Component padre para reflejar el cambio en la UI
             router.refresh();
         }
