@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, ReactNode } from 'react';
+import { useState, useTransition, useEffect, ReactNode } from 'react';
 import { StudentSearchSelect } from './StudentSearchSelect';
 import { EnrollmentAuditCard } from './EnrollmentAuditCard';
 import { getEnrollmentAudit } from '@/app/actions/migration';
@@ -198,20 +198,27 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
     // health_insurance es un STRING plano — NO parsear como JSON
     const eps = typeof student.health_insurance === 'string' ? student.health_insurance : null;
 
-    // Pre-poblar desde campos existentes (legacy + medical_info JSONB si existe)
-    const existingMedInfo = student.medical_info && typeof student.medical_info === 'object' ? student.medical_info : {};
-    const [medications, setMedications] = useState<string>(existingMedInfo.medications || '');
-    const [allergies, setAllergies] = useState<string>(existingMedInfo.allergies || '');
-    const [conditions, setConditions] = useState<string>(existingMedInfo.conditions || student.medical_conditions || '');
-    const [emergencyName, setEmergencyName] = useState<string>(
-        existingMedInfo.emergency_contact?.name || student.guardian_name || ''
-    );
-    const [emergencyPhone, setEmergencyPhone] = useState<string>(
-        existingMedInfo.emergency_contact?.phone || student.guardian_phone || ''
-    );
-    const [emergencyRelationship, setEmergencyRelationship] = useState<string>(
-        existingMedInfo.emergency_contact?.relationship || student.guardian_relationship || ''
-    );
+    // Estados del formulario — inicializados vacíos, hidratados por useEffect
+    const [medications, setMedications] = useState<string>('');
+    const [allergies, setAllergies] = useState<string>('');
+    const [conditions, setConditions] = useState<string>('');
+    const [emergencyName, setEmergencyName] = useState<string>('');
+    const [emergencyPhone, setEmergencyPhone] = useState<string>('');
+    const [emergencyRelationship, setEmergencyRelationship] = useState<string>('');
+
+    // Rehidratar cuando cambia el estudiante seleccionado
+    useEffect(() => {
+        const mi = student?.medical_info;
+        const isObject = mi && typeof mi === 'object' && !Array.isArray(mi);
+
+        setMedications(isObject ? (mi.medications ?? '') : '');
+        setAllergies(isObject ? (mi.allergies ?? '') : '');
+        setConditions(isObject ? (mi.conditions ?? '') : '');
+        // Las claves son planas en el JSONB: emergency_contact_name, etc.
+        setEmergencyName(isObject ? (mi.emergency_contact_name ?? '') : '');
+        setEmergencyPhone(isObject ? (mi.emergency_contact_phone ?? '') : '');
+        setEmergencyRelationship(isObject ? (mi.emergency_contact_relationship ?? '') : '');
+    }, [student.id]); // Re-ejecutar solo cuando cambia de estudiante
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
