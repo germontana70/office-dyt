@@ -103,7 +103,12 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 day: '2-digit'
             }).format(new Date(dateStr));
         } catch {
-            return new Date(dateStr).toLocaleDateString('es-CO');
+            return new Intl.DateTimeFormat('es-CO', {
+                timeZone: 'America/Bogota',
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            }).format(new Date());
         }
     };
 
@@ -116,7 +121,12 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 hour12: true
             }).format(new Date(dateStr));
         } catch {
-            return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+            return new Intl.DateTimeFormat('es-CO', {
+                timeZone: 'America/Bogota',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(new Date());
         }
     };
 

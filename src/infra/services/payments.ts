@@ -51,10 +51,15 @@ export const paymentService = {
      * Calcula horas dinámicamente usando event_date y event_end_time.
      */
     calculatePayment(name: string, rate: number, sessions: ClassSession[], instrument: string = ''): TeacherPaymentInfo {
-        // Solo se pagan las clases 'scheduled', 'confirmed' o con estados específicos de asistencia si existen.
-        const payableSessions = sessions.filter(s =>
-            s.status === 'scheduled' || s.status === 'Asistio' || s.status?.includes('Reposición')
-        );
+        // Excluir sesiones CANCELADAS (cualquier capitalización).
+        // Todo lo demás (scheduled, completed, rescheduled, Reposición) es pagable.
+        const CANCELLED_KEYWORDS = ['cancel', 'cancelad', 'canceled', 'no asistio', 'no asistió'];
+        const payableSessions = sessions.filter(s => {
+            const statusLower = (s.status || '').toLowerCase();
+            const notesLower = (s.notes || '').toLowerCase();
+            const isCancelled = CANCELLED_KEYWORDS.some(k => statusLower.includes(k) || notesLower.includes(k));
+            return !isCancelled;
+        });
 
         let totalHours = 0;
 

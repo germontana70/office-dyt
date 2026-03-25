@@ -61,19 +61,16 @@ export function parseGoogleCalendarEvent(
     }
 
     // 3. Extract Hints for fuzzy matching
-    // Typically format is: "JUAN PEREZ - SEBAS - CLASE 8"
-    // We'll split by "-" to get potential names
+    // PRIMARY: Read from description — format is:
+    // "👤 Estudiante: NOMBRE DEL ESTUDIANTE\n🎹 Profesor: NOMBRE DEL PROFESOR"
+    const rawDescription = description || '';
+    const studentFromDesc = /[Ee]studiante:\s*(.+)/i.exec(rawDescription);
+    const teacherFromDesc = /[Pp]rofesor:\s*(.+)/i.exec(rawDescription);
+
+    // FALLBACK: Parse title — real format is "PROF - ESTUDIANTE - Clase N"
     const parts = upperTitle.split('-').map(p => p.trim()).filter(p => p.length > 0);
-
-    let studentNameHint = upperTitle;
-    let teacherNameHint = '';
-
-    if (parts.length >= 2) {
-        studentNameHint = parts[0];
-        teacherNameHint = parts[1]; // Often the teacher nickname
-    } else if (parts.length === 1) {
-        studentNameHint = parts[0];
-    }
+    const fallbackTeacher = parts.length >= 1 ? parts[0] : upperTitle;
+    const fallbackStudent = parts.length >= 2 ? parts[1] : '';
 
     // Clean hints from common noise words
     const cleanHint = (hint: string) => {
@@ -87,8 +84,12 @@ export function parseGoogleCalendarEvent(
             .trim();
     };
 
-    studentNameHint = cleanHint(studentNameHint);
-    teacherNameHint = cleanHint(teacherNameHint);
+    const studentNameHint = cleanHint(
+        studentFromDesc ? studentFromDesc[1].trim() : fallbackStudent
+    );
+    const teacherNameHint = cleanHint(
+        teacherFromDesc ? teacherFromDesc[1].trim() : fallbackTeacher
+    );
 
     return {
         status,
