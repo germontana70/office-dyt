@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { 
   createGroupClass, 
+  updateGroupClass,
   deleteGroupClass, 
   getStudentsInGroup, 
   enrollStudentInGroup, 
@@ -58,6 +59,7 @@ export default function GroupClassesClient({
   const [baseName, setBaseName] = useState('');
   const [groupSuffix, setGroupSuffix] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<any | null>(null);
 
   // Program Names Catalog State
   const [programNames, setProgramNames] = useState(initialProgramNames);
@@ -131,7 +133,7 @@ export default function GroupClassesClient({
     }
   };
 
-  const handleCreateClass = async (e: React.FormEvent) => {
+  const handleSubmitClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!baseName || !groupSuffix) {
       toast.error('Selecciona el programa base y el sufijo del grupo');
@@ -141,22 +143,39 @@ export default function GroupClassesClient({
 
     setIsSubmitting(true);
     try {
-      const res = await createGroupClass({
-        ...formData,
-        name: finalName,
-        semester: currentSemester
-      });
+      let res;
+      if (editingGroup) {
+        res = await updateGroupClass(editingGroup.id, {
+          ...formData,
+          name: finalName,
+          semester: currentSemester
+        });
+      } else {
+        res = await createGroupClass({
+          ...formData,
+          name: finalName,
+          semester: currentSemester
+        });
+      }
 
       if (res.error) {
         toast.error(res.error);
       } else if (res.data) {
-        toast.success('Clase grupal creada con éxito');
+        toast.success(editingGroup ? 'Grupo actualizado con éxito' : 'Clase grupal creada con éxito');
+        
         const teacherObj = teachers.find(t => t.id === formData.teacher_id);
-        const newClass = {
+        const updatedClass = {
           ...res.data,
           teachers: teacherObj ? { id: teacherObj.id, name: teacherObj.name, instrument: teacherObj.instrument } : null
         };
-        setClasses([...classes, newClass].sort((a, b) => a.name.localeCompare(b.name)));
+
+        if (editingGroup) {
+          setClasses(classes.map(c => c.id === editingGroup.id ? updatedClass : c).sort((a, b) => a.name.localeCompare(b.name)));
+          setEditingGroup(null);
+        } else {
+          setClasses([...classes, updatedClass].sort((a, b) => a.name.localeCompare(b.name)));
+        }
+
         setBaseName('');
         setGroupSuffix('');
         setFormData({ name: '', teacher_id: '', room: '', day_of_week: '', start_time: '', duration_minutes: 60 });
@@ -166,6 +185,36 @@ export default function GroupClassesClient({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEditClick = (cls: any) => {
+    setEditingGroup(cls);
+    
+    // Split name into baseName and suffix
+    const nameParts = cls.name.split(' ');
+    const suffix = nameParts.pop();
+    const base = nameParts.join(' ');
+    
+    setBaseName(base);
+    setGroupSuffix(suffix);
+    setFormData({
+      name: cls.name,
+      teacher_id: cls.teacher_id || '',
+      room: cls.room || '',
+      day_of_week: cls.day_of_week || '',
+      start_time: cls.start_time || '',
+      duration_minutes: cls.duration_minutes || 60
+    });
+
+    // Scroll to top form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingGroup(null);
+    setBaseName('');
+    setGroupSuffix('');
+    setFormData({ name: '', teacher_id: '', room: '', day_of_week: '', start_time: '', duration_minutes: 60 });
   };
 
   const handleDeleteClass = async (id: string, name: string) => {
@@ -324,10 +373,10 @@ export default function GroupClassesClient({
           <div className="glass-panel p-8 rounded-2xl bg-black/60 backdrop-blur-md border border-neon-cyan/20 w-full">
             <h3 className="text-xl font-bold text-white mb-8 uppercase tracking-wider flex items-center gap-3">
               <Plus className="w-6 h-6 text-neon-cyan" />
-              Configuración de Nuevo Grupo
+              {editingGroup ? `Editando Grupo: ${editingGroup.name}` : 'Configuración de Nuevo Grupo'}
             </h3>
             
-            <form onSubmit={handleCreateClass} className="space-y-8">
+            <form onSubmit={handleSubmitClass} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                 {/* Naming logic grouped */}
                 <div className="space-y-4">
@@ -447,9 +496,18 @@ export default function GroupClassesClient({
                     {isSubmitting ? (
                       <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
                     ) : (
-                      'Confirmar'
+                      editingGroup ? 'Actualizar' : 'Confirmar'
                     )}
                   </button>
+                  {editingGroup && (
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="w-full bg-zinc-500/10 border border-zinc-500/20 text-zinc-400 font-bold py-3 rounded-lg uppercase tracking-wider hover:bg-zinc-500/20 transition-all text-xs"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
@@ -589,6 +647,13 @@ export default function GroupClassesClient({
 
                     {/* Column 4: Actions */}
                     <div className="w-full lg:w-auto flex justify-end items-center gap-2 pr-2 border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
+                      <button
+                        onClick={() => handleEditClick(cls)}
+                        className="p-3 bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan rounded-xl hover:bg-neon-cyan hover:text-black transition-all"
+                        title="Editar grupo"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
                       <button
                         onClick={() => handleDeleteClass(cls.id, cls.name)}
                         className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all"

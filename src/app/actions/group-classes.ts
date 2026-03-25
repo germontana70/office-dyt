@@ -44,6 +44,49 @@ export async function createGroupClass(data: {
   return { data: result };
 }
 
+export async function updateGroupClass(
+  id: string,
+  data: {
+    semester: string;
+    name: string;
+    teacher_id?: string | null;
+    room?: string | null;
+    day_of_week?: string | null;
+    start_time?: string | null;
+    duration_minutes?: number | null;
+  }
+) {
+  const supabase = await createClient();
+
+  // Validate required fields
+  if (!id || !data.semester || !data.name) {
+    return { error: 'ID, semestre y nombre de la clase son requeridos' };
+  }
+
+  const { data: result, error } = await supabase
+    .from('dyt_group_classes')
+    .update({
+      semester: data.semester,
+      name: data.name,
+      teacher_id: data.teacher_id,
+      room: data.room,
+      day_of_week: data.day_of_week,
+      start_time: data.start_time,
+      duration_minutes: data.duration_minutes,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating group class:', error);
+    return { error: 'Error al actualizar la clase grupal: ' + error.message };
+  }
+
+  revalidatePath('/dashboard/clases-grupales');
+  return { data: result };
+}
+
 export async function getGroupClassesBySemester(semester: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
