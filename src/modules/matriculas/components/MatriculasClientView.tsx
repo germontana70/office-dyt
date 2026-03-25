@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ReactNode } from 'react';
+import { useState, useTransition, ReactNode } from 'react';
 import { StudentSearchSelect } from './StudentSearchSelect';
 import { EnrollmentAuditCard } from './EnrollmentAuditCard';
 import { getEnrollmentAudit } from '@/app/actions/migration';
@@ -17,8 +17,10 @@ import {
 } from 'lucide-react';
 import { searchStudentsHybrid, reintegrateStudentFromHistory, HybridSearchResult } from '@/app/actions/reintegrate';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { WithdrawStudentModal } from './WithdrawStudentModal';
 import { ReactivateStudentButton } from './ReactivateStudentButton';
+import { updateMedicalInfo } from '../actions/update-medical-info';
 
 interface MatriculasClientViewProps {
     students: CurrentStudent[];
@@ -190,8 +192,49 @@ function TabFamiliarPanel({ student }: { student: CurrentStudent & { [key: strin
 }
 
 function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]: any } }) {
+    const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+
     // health_insurance es un STRING plano — NO parsear como JSON
     const eps = typeof student.health_insurance === 'string' ? student.health_insurance : null;
+
+    // Pre-poblar desde campos existentes (legacy + medical_info JSONB si existe)
+    const existingMedInfo = student.medical_info && typeof student.medical_info === 'object' ? student.medical_info : {};
+    const [medications, setMedications] = useState<string>(existingMedInfo.medications || '');
+    const [allergies, setAllergies] = useState<string>(existingMedInfo.allergies || '');
+    const [conditions, setConditions] = useState<string>(existingMedInfo.conditions || student.medical_conditions || '');
+    const [emergencyName, setEmergencyName] = useState<string>(
+        existingMedInfo.emergency_contact?.name || student.guardian_name || ''
+    );
+    const [emergencyPhone, setEmergencyPhone] = useState<string>(
+        existingMedInfo.emergency_contact?.phone || student.guardian_phone || ''
+    );
+    const [emergencyRelationship, setEmergencyRelationship] = useState<string>(
+        existingMedInfo.emergency_contact?.relationship || student.guardian_relationship || ''
+    );
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!student.id) return;
+
+        startTransition(async () => {
+            const res = await updateMedicalInfo(student.id!, {
+                medications,
+                allergies,
+                conditions,
+                emergency_contact_name: emergencyName,
+                emergency_contact_phone: emergencyPhone,
+                emergency_contact_relationship: emergencyRelationship,
+            });
+
+            if (res.error) {
+                toast.error(`Error: ${res.error}`);
+            } else {
+                toast.success('Ficha médica guardada exitosamente');
+                router.refresh();
+            }
+        });
+    };
 
     return (
         <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -222,14 +265,13 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                         )}
                     </div>
 
-                    {/* EPS + placeholders para datos migrados */}
+                    {/* EPS + Factor RH */}
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <InfoField
                             label="EPS / Medicina Prepagada"
                             value={eps}
                             icon={<ShieldPlus className="w-3 h-3" />}
                         />
-                        {/* Espacio reservado para alergias/medicamentos futuros del record */}
                         <InfoField label="Factor RH" value={student.rh_factor} icon={<Droplets className="w-3 h-3" />} />
                     </div>
                 </div>
@@ -243,15 +285,17 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                     <span className="ml-auto px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-rose-500/10 border border-rose-500/20 text-rose-400">Editable</span>
                 </div>
 
-                <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                    {/* Textareas — Campo ancho ocupando 2 columnas */}
                     <div className="md:col-span-2 flex flex-col gap-1.5">
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Medicamentos Actuales</label>
                         <textarea
                             rows={3}
+                            value={medications}
+                            onChange={e => setMedications(e.target.value)}
                             placeholder="Ej: Ritalín 10mg, Ventolin inhalador..."
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-cyan-500/40 focus:outline-none resize-none transition-colors"
+                            disabled={isPending}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-cyan-500/40 focus:outline-none resize-none transition-colors disabled:opacity-50"
                         />
                     </div>
 
@@ -259,8 +303,11 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Alergias Documentadas</label>
                         <textarea
                             rows={3}
+                            value={allergies}
+                            onChange={e => setAllergies(e.target.value)}
                             placeholder="Ej: Penicilina, alergia a nueces, látex..."
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-rose-500/40 focus:outline-none resize-none transition-colors"
+                            disabled={isPending}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-rose-500/40 focus:outline-none resize-none transition-colors disabled:opacity-50"
                         />
                     </div>
 
@@ -268,8 +315,11 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Condiciones Especiales / Diagnósticos</label>
                         <textarea
                             rows={3}
+                            value={conditions}
+                            onChange={e => setConditions(e.target.value)}
                             placeholder="Ej: TDAH, asma leve, hipoacusia izquierda..."
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-purple-500/40 focus:outline-none resize-none transition-colors"
+                            disabled={isPending}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-purple-500/40 focus:outline-none resize-none transition-colors disabled:opacity-50"
                         />
                     </div>
 
@@ -285,8 +335,11 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Nombre Completo</label>
                         <input
                             type="text"
+                            value={emergencyName}
+                            onChange={e => setEmergencyName(e.target.value)}
                             placeholder="Nombre del contacto de emergencia"
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-amber-500/40 focus:outline-none transition-colors"
+                            disabled={isPending}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-amber-500/40 focus:outline-none transition-colors disabled:opacity-50"
                         />
                     </div>
 
@@ -294,8 +347,11 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Teléfono de Emergencia</label>
                         <input
                             type="tel"
+                            value={emergencyPhone}
+                            onChange={e => setEmergencyPhone(e.target.value)}
                             placeholder="Ej: 315 000 0000"
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-amber-500/40 focus:outline-none transition-colors"
+                            disabled={isPending}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-amber-500/40 focus:outline-none transition-colors disabled:opacity-50"
                         />
                     </div>
 
@@ -303,19 +359,32 @@ function TabMedicaPanel({ student }: { student: CurrentStudent & { [key: string]
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Parentesco</label>
                         <input
                             type="text"
+                            value={emergencyRelationship}
+                            onChange={e => setEmergencyRelationship(e.target.value)}
                             placeholder="Ej: Madre, Tío, Abuelo..."
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-amber-500/40 focus:outline-none transition-colors"
+                            disabled={isPending}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:border-amber-500/40 focus:outline-none transition-colors disabled:opacity-50"
                         />
                     </div>
 
                     {/* Botón full-width */}
                     <div className="md:col-span-2 pt-2">
                         <button
-                            type="button"
-                            className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest text-white bg-gradient-to-r from-cyan-600/80 to-cyan-500/80 hover:from-cyan-500/80 hover:to-cyan-400/80 border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.15)] hover:shadow-[0_0_30px_rgba(34,211,238,0.3)] transition-all duration-300 active:scale-[0.98]"
+                            type="submit"
+                            disabled={isPending}
+                            className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-black text-sm uppercase tracking-widest text-white bg-gradient-to-r from-cyan-600/80 to-cyan-500/80 hover:from-cyan-500/80 hover:to-cyan-400/80 border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.15)] hover:shadow-[0_0_30px_rgba(34,211,238,0.3)] transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Save className="w-4 h-4" />
-                            Guardar Ficha Médica
+                            {isPending ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Guardando...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    Guardar Ficha Médica
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>
