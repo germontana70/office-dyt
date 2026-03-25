@@ -32,10 +32,13 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
         if (res.error) {
             alert(res.error);
         } else {
+            const student = students.find(s => s.id === selectedStudentId);
+            const studentName = student ? `${student.first_name} ${student.last_name}` : "Estudiante";
+
             setIsOpen(false);
             setSelectedStudentId('');
             setReason('');
-            toast.success("Estudiante retirado del semestre exitosamente");
+            toast.success(`Estudiante ${studentName} retirado del semestre exitosamente`);
             // Forzar refetch del Server Component padre para reflejar el cambio en la UI
             router.refresh();
         }

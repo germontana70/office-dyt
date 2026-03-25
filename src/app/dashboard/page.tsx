@@ -13,7 +13,8 @@ export default async function DashboardPage() {
     let studentCount = 0;
     if (activeSemester) {
         const students = await CurrentStudentRepository.getAllBySemester(activeSemester);
-        studentCount = students.length;
+        // Contamos solo los activos según la lógica relacional de Fase 2
+        studentCount = students.filter(s => s.enrollment_status === 'Activo').length;
     }
 
     const teachers = await TeacherRepository.getAll();
