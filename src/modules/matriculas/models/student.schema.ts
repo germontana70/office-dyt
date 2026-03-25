@@ -111,6 +111,9 @@ export const CurrentStudentSchema = z.object({
     discount_percentage: z.coerce.number().nullable().catch(null),
     payment_start_date: safeDateTransform,
     tuition_fee: z.coerce.number().nullable().catch(null),
+
+    // Ficha Médica Ampliada (JSONB creado manualmente en Supabase)
+    medical_info: z.any().optional().nullable().default(null),
 });
 
 export type CurrentStudent = z.infer<typeof CurrentStudentSchema>;
