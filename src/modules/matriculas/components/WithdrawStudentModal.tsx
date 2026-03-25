@@ -57,7 +57,7 @@ export function WithdrawStudentModal({ students }: WithdrawStudentModalProps) {
 
             {/* Modal Overlay */}
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
                     <GlassCard className="w-full max-w-md p-6 border-white/10 bg-black/80 relative shadow-2xl animate-in zoom-in-95 duration-300">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-destructive to-transparent opacity-50" />
 
