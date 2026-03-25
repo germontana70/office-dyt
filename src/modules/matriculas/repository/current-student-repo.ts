@@ -4,42 +4,53 @@ import { CurrentStudentSchema, CurrentStudent } from '../models/student.schema';
 export class CurrentStudentRepository {
     /**
      * Obtiene todos los estudiantes matriculados en un semestre específico.
+     * Usa consultas paralelas (Memory Map) para cruzar el estado real de dyt_enrollments.
      * Aplica saneamiento estricto Zod para proteger el frontend.
      */
     static async getAllBySemester(semester: string): Promise<CurrentStudent[]> {
         const supabase = await createClient();
 
-        // Obtenemos los datos crudos de Supabase con JOIN a la matrícula del semestre
-        const { data, error } = await supabase
-            .from('students')
-            .select(`
-                *,
-                dyt_enrollments!inner(status, semester)
-            `)
-            .eq('semester', semester) // Compatibilidad legacy (si la tabla original lo tiene)
-            .eq('dyt_enrollments.semester', semester) // Filtro estricto del JOIN
-            .order('first_name', { ascending: true });
+        // ── Consultas paralelas: students + dyt_enrollments simultáneamente ─────
+        const [studentsResult, enrollmentsResult] = await Promise.all([
+            supabase
+                .from('students')
+                .select('*')
+                .eq('semester', semester)
+                .order('first_name', { ascending: true }),
+            supabase
+                .from('dyt_enrollments')
+                .select('student_id, status')
+                .eq('semester', semester),
+        ]);
 
-        if (error) {
-            console.error('[Supabase Error] Fallo al obtener students con JOIN:', error);
+        if (studentsResult.error) {
+            console.error('[Supabase Error] Fallo al obtener students:', studentsResult.error);
             throw new Error(`No se pudieron obtener los estudiantes para el semestre ${semester}`);
         }
 
-        if (!data || data.length === 0) return [];
+        if (!studentsResult.data || studentsResult.data.length === 0) return [];
 
-        // Parseo Estricto y Resiliente (Data Hydration)
+        // ── Memory Map: { [student_id]: status } ────────────────────────────────
+        const statusMap: Record<string, string> = {};
+        if (!enrollmentsResult.error && enrollmentsResult.data) {
+            for (const enrollment of enrollmentsResult.data) {
+                if (enrollment.student_id) {
+                    statusMap[enrollment.student_id] = enrollment.status;
+                }
+            }
+        } else if (enrollmentsResult.error) {
+            console.warn('[Supabase Warning] No se pudo obtener estados de dyt_enrollments:', enrollmentsResult.error.message);
+        }
+
+        // ── Parseo Estricto y Resiliente (Data Hydration) ───────────────────────
         const validStudents: CurrentStudent[] = [];
 
-        for (const row of data) {
-            // Ajuste al vuelo por si la BD usa 'semester' en lugar de 'semester_enrolled'
-            // Y extracción del status real de Phase 2 (dyt_enrollments)
-            const dytEnrollments = Array.isArray(row.dyt_enrollments) ? row.dyt_enrollments : [row.dyt_enrollments];
-            const realStatus = dytEnrollments[0]?.status || 'Retirado';
-
+        for (const row of studentsResult.data) {
             const rawData = {
                 ...row,
-                semester_enrolled: row.semester_enrolled || row.semester, // Compatibilidad
-                enrollment_status: realStatus // Sobrescribir el fallback de Zod
+                semester_enrolled: row.semester_enrolled || row.semester,
+                // Estado real desde dyt_enrollments; fallback 'Activo' si no hay matrícula mapeada
+                enrollment_status: statusMap[row.id] ?? 'Activo',
             };
 
             const parsed = CurrentStudentSchema.safeParse(rawData);
@@ -47,7 +58,6 @@ export class CurrentStudentRepository {
             if (parsed.success) {
                 validStudents.push(parsed.data);
             } else {
-                // DO NO HARM: Logueamos la advertencia sin que caiga la aplicación entera
                 console.warn(`[Zod Warning] Registro descartado o corrupto (ID: ${row.id}):`, parsed.error.issues);
             }
         }
@@ -57,25 +67,34 @@ export class CurrentStudentRepository {
 
     /**
      * Obtiene un estudiante específico por su ID.
+     * Cruza el estado real de dyt_enrollments en paralelo.
      */
     static async getById(studentId: string): Promise<CurrentStudent | null> {
         const supabase = await createClient();
 
-        const { data, error } = await supabase
-            .from('students')
-            .select(`
-                *,
-                dyt_enrollments(status, semester)
-            `)
-            .eq('id', studentId)
-            .single();
+        const [studentResult, enrollmentResult] = await Promise.all([
+            supabase
+                .from('students')
+                .select('*')
+                .eq('id', studentId)
+                .single(),
+            supabase
+                .from('dyt_enrollments')
+                .select('status')
+                .eq('student_id', studentId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle(),
+        ]);
 
-        if (error) {
-            console.error(`[Supabase Error] Fallo al obtener estudiante ${studentId}:`, error);
+        if (studentResult.error) {
+            console.error(`[Supabase Error] Fallo al obtener estudiante ${studentId}:`, studentResult.error);
             return null;
         }
 
-        if (!data) return null;
+        if (!studentResult.data) return null;
+
+        const data = studentResult.data;
 
         let photo_url = data.photo_url;
         if (photo_url && !photo_url.startsWith('http')) {
@@ -83,17 +102,13 @@ export class CurrentStudentRepository {
             photo_url = publicUrlData.publicUrl;
         }
 
-        // Identificar la matrícula más reciente o activa (idealmente cruzar contra el activeSemester)
-        const allEnrollments = Array.isArray(data.dyt_enrollments) ? data.dyt_enrollments : (data.dyt_enrollments ? [data.dyt_enrollments] : []);
-        // Si hay una matrícula activa, la tomamos. Si no, tomamos la primera que encuentre, o 'Retirado'
-        const activeEnrollment = allEnrollments.find((e: any) => e.status === 'Activa') || allEnrollments[0];
-        const realStatus = activeEnrollment?.status || 'Retirado';
+        const realStatus = enrollmentResult.data?.status ?? 'Activo';
 
         const rawData = {
             ...data,
             photo_url,
             semester_enrolled: data.semester_enrolled || data.semester,
-            enrollment_status: realStatus
+            enrollment_status: realStatus,
         };
 
         const parsed = CurrentStudentSchema.safeParse(rawData);
