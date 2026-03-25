@@ -408,7 +408,7 @@ export default function GroupClassesClient({
                           className="w-full bg-black/50 border border-white/10 rounded-lg pl-3 pr-8 py-3 text-white appearance-none focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan transition-all text-sm"
                         >
                           <option value="" className="bg-[#0a0a0a] text-white">Sufijo...</option>
-                          {['01', '02', '03', '04', '05', '06', '07', '08'].map(g => (
+                          {Array.from({ length: 20 }, (_, i) => String(i + 1).padStart(2, '0')).map(g => (
                             <option key={g} value={g} className="bg-[#0a0a0a] text-white">{g}</option>
                           ))}
                         </select>

@@ -36,6 +36,9 @@ export async function createGroupClass(data: {
     .single();
 
   if (error) {
+    if (error.code === '23505') {
+      return { error: 'Ya existe una clase grupal con este nombre en este semestre. Por favor, selecciona el siguiente número de grupo (ej. 02, 03).' };
+    }
     console.error('Error creating group class:', error);
     return { error: 'Error al crear la clase grupal: ' + error.message };
   }
@@ -79,6 +82,9 @@ export async function updateGroupClass(
     .single();
 
   if (error) {
+    if (error.code === '23505') {
+      return { error: 'Ya existe una clase grupal con este nombre en este semestre. Por favor, selecciona el siguiente número de grupo (ej. 02, 03).' };
+    }
     console.error('Error updating group class:', error);
     return { error: 'Error al actualizar la clase grupal: ' + error.message };
   }
