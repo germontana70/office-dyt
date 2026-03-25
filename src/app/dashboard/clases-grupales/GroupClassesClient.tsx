@@ -73,6 +73,7 @@ export default function GroupClassesClient({
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{key: 'studentName' | 'studentDocument', direction: 'asc' | 'desc'}>({key: 'studentName', direction: 'asc'});
 
   // Combobox State
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,6 +133,24 @@ export default function GroupClassesClient({
       console.error(error);
     }
   };
+
+  const requestSort = (key: 'studentName' | 'studentDocument') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedEnrolledStudents = [...enrolledStudents].sort((a, b) => {
+    if (a[sortConfig.key].toLowerCase() < b[sortConfig.key].toLowerCase()) {
+      return sortConfig.direction === 'asc' ? -1 : 1;
+    }
+    if (a[sortConfig.key].toLowerCase() > b[sortConfig.key].toLowerCase()) {
+      return sortConfig.direction === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
 
   const handleSubmitClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -674,7 +693,7 @@ export default function GroupClassesClient({
       {activeTab === 'enrollment' && (
         <div className="flex flex-col w-full gap-8">
           {/* TOP SELECTION BAR */}
-          <div className="glass-panel p-6 rounded-2xl bg-black/60 backdrop-blur-md border border-neon-purple/20 w-full">
+          <div className="glass-panel p-6 rounded-2xl bg-black/60 backdrop-blur-md border border-neon-purple/20 w-full relative z-[60]">
             <div className="flex flex-col lg:flex-row items-center gap-6">
               <div className="flex-shrink-0 flex items-center gap-4 border-r border-white/10 pr-6 mr-2 hidden lg:flex">
                 <div className="w-12 h-12 rounded-xl bg-neon-purple/20 border border-neon-purple/40 flex items-center justify-center">
@@ -806,39 +825,63 @@ export default function GroupClassesClient({
                     <p className="text-zinc-500 font-bold tracking-widest uppercase text-sm">El grupo está vacío actualmente</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {enrolledStudents.map(student => (
-                      <div 
-                        key={student.programId} 
-                        className="glass-panel group relative bg-black/60 border border-white/5 hover:border-neon-purple/40 p-6 rounded-2xl flex flex-col justify-between transition-all overflow-hidden"
-                      >
-                         <div className="absolute -top-4 -right-4 w-16 h-16 bg-neon-purple/5 blur-2xl group-hover:bg-neon-purple/20 transition-all rounded-full" />
-                         
-                         <div>
-                           <div className="font-black text-white text-xl mb-1 tracking-tight leading-none group-hover:text-neon-purple transition-colors">
-                             {student.studentName}
-                           </div>
-                           <div className="text-neon-purple/60 text-[10px] font-black uppercase tracking-widest mb-4">
-                             {student.studentDocument}
-                           </div>
-                           
-                           <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5">
-                             <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
-                             <span className="text-xs text-zinc-400 font-medium truncate">{student.programName}</span>
-                           </div>
-                         </div>
-
-                         <div className="mt-6 pt-4 border-t border-white/5 flex justify-end">
-                            <button
-                              onClick={() => handleRemoveStudent(student.programId, student.studentName)}
-                              className="text-white/20 hover:text-red-500 hover:bg-red-500/10 p-2.5 rounded-xl transition-all"
-                              title="Retirar del grupo"
-                            >
-                              <X className="w-5 h-5" />
-                            </button>
-                         </div>
-                      </div>
-                    ))}
+                  <div className="glass-panel bg-black/40 border border-white/5 rounded-2xl overflow-hidden overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-white/10 bg-white/5">
+                          <th 
+                            onClick={() => requestSort('studentName')}
+                            className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-neon-purple transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              ESTUDIANTE
+                              <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'studentName' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key !== 'studentName' ? 'opacity-20' : ''}`} />
+                            </div>
+                          </th>
+                          <th 
+                            onClick={() => requestSort('studentDocument')}
+                            className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-neon-purple transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              DOCUMENTO
+                              <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'studentDocument' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key !== 'studentDocument' ? 'opacity-20' : ''}`} />
+                            </div>
+                          </th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">PROGRAMA ASIGNADO</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right pr-10">ACCIÓN</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {sortedEnrolledStudents.map(student => (
+                          <tr 
+                            key={student.programId} 
+                            className="group hover:bg-white/[0.03] transition-colors"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-white group-hover:text-neon-purple transition-colors">{student.studentName}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="font-mono text-zinc-500 text-xs">{student.studentDocument}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                                <BookOpen className="w-3 h-3 opacity-50" />
+                                {student.programName}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right pr-6">
+                              <button
+                                onClick={() => handleRemoveStudent(student.programId, student.studentName)}
+                                className="p-2.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                                title="Retirar del grupo"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
