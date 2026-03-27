@@ -34,4 +34,20 @@ El Robot lee "0 eventos" porque, al ser un usuario nuevo, nadie le ha compartido
 4. Disfruta viendo cómo se llena la nómina mágicamente con las horas exactas y los nombres correctos.
 
 ---
+
+## 📅 ACTUACIÓN: 27 de Marzo de 2026
+
+**1. Estado Actual (Saneamiento de Parsing):**
+- Implementación del "Nuke Parser" en `calendarParser.ts` (Destructor de basura HTML, caracteres invisibles y Regex con split de seguridad).
+- Eliminación de falsos positivos en las advertencias de clases grupales y purga de fallbacks estáticos de título para estudiantes.
+
+**2. CRÍTICO - EL MISTERIO PENDIENTE:**
+A pesar de que el parser extrae limpiamente los datos y la lógica es lineal, los eventos del calendario "Clases canceladas" siguen mostrando al estudiante como "No Registrado" en la UI de pagos. 
+
+**Hipótesis para mañana:**
+1. El `flexibleMatch` falla por caracteres ocultos internos en el nombre que no estamos truncando.
+2. Supabase está rechazando el *update* de ese campo por alguna restricción en la base de datos.
+3. El objeto `parsed` llega vacío por un fallo silencioso de la API de Google en eventos cancelados.
+
+---
 *Fin de transmisión. Apagando motores. ¡Excelente trabajo, equipo!*

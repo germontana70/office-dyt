@@ -29,16 +29,49 @@ export function parseGoogleCalendarEvent(
     calendarName: string
 ): ParsedEventData {
     const upperTitle = (title || '').toUpperCase();
-    const cleanDesc = (description || '').replace(/<[^>]*>?/gm, ''); // Sanitization HTML
+
+    // ============================================================================
+    // 1. DESTRUCTOR TOTAL DE BASURA Y EXTRACCIÓN INFALIBLE
+    // ============================================================================
+    const cleanDesc = (description || '')
+        .replace(/&nbsp;/gi, ' ') // Destruir espacios HTML
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // Destruir caracteres invisibles
+        .replace(/<(br|div|p|li)\s*\/?>/gi, '\n') // Forzar saltos de línea estructurales
+        .replace(/<\/(div|p|li)>/gi, '\n')
+        .replace(/<[^>]*>?/gm, ' ') // Purgar tags restantes
+        .trim();
+
     const upperDesc = cleanDesc.toUpperCase();
     const rawCalendarName = (calendarName || '').trim();
 
-    // 1. Determine Status & Reposición
-    // REGLA: Reposición ÚNICAMENTE si está en el título
-    const isReposicion = /reposici[oó]n/i.test(title);
-    let status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'makeup' = 'scheduled';
+    let studentNameHint = '';
+    let teacherNameHint = '';
 
-    // Regla Absoluta de Cancelación
+    // Extraer Estudiante (Soporta espacios colados antes de los dos puntos)
+    const studentRegex = /(?:Estudiante\s*:|bienvenida a\s*:?)\s*([^\n]+)/i;
+    const studentMatch = studentRegex.exec(cleanDesc);
+    if (studentMatch && studentMatch[1]) {
+        let rawName = studentMatch[1];
+        // Truncar si la línea se fusionó con metadatos contiguos
+        rawName = rawName.split(/(?:🎹|🏫|👤|👥|Programa:|Salón:|Motivo|Docente|Profesor)/i)[0];
+        studentNameHint = rawName.trim();
+    }
+
+    // Extraer Docente
+    const teacherRegex = /(?:Docente\s*:|Profesor(?:a)?\s*:)\s*([^\n]+)/i;
+    const teacherMatch = teacherRegex.exec(cleanDesc);
+    if (teacherMatch && teacherMatch[1]) {
+        let rawName = teacherMatch[1];
+        rawName = rawName.split(/(?:🎹|🏫|👤|👥|Programa:|Salón:|Motivo|Estudiante)/i)[0];
+        teacherNameHint = rawName.trim();
+    }
+
+    // ============================================================================
+    // 2. LÓGICA DE ESTADO (Status)
+    // ============================================================================
+    const isReposicion = /reposici[oó]n/i.test(title);
+    let status: 'scheduled' | 'completed' | 'cancelled' | 'CANCELLED' | 'rescheduled' | 'makeup' = 'scheduled';
+
     if (rawCalendarName.toLowerCase() === 'clases canceladas') {
         status = 'cancelled';
     } else if (isReposicion) {
@@ -47,15 +80,18 @@ export function parseGoogleCalendarEvent(
         status = 'completed';
     }
 
-    // 2. Extract Class Number (Altura)
+    // ============================================================================
+    // 3. EXTRAER ALTURA (Clase #X)
+    // ============================================================================
     let classNumber: number | null = null;
-    // Preferimos el título para la altura si está disponible
     const classMatch = /(?:CLASE|CL)\s*#?\s*(\d+)/i.exec(title + ' ' + cleanDesc);
     if (classMatch && classMatch[1]) {
         classNumber = parseInt(classMatch[1], 10);
     }
 
-    // 3. Extract Motivo Cancelación & Notes
+    // ============================================================================
+    // 4. EXTRAER MOTIVO CANCELACIÓN Y NOTAS
+    // ============================================================================
     let notes = cleanDesc;
     if (status === 'cancelled') {
         const motivoMatch = /Motivo(?: Cancelaci[oó]n)?:\s*([^\n]+)/i.exec(cleanDesc);
@@ -63,32 +99,6 @@ export function parseGoogleCalendarEvent(
             notes = motivoMatch[1].trim();
         }
     }
-
-    // 4. Extract Hints for fuzzy matching (Prioridad Máxima: Descripción)
-    // Directiva 1: Regex con Positive Lookahead por Límites Lógicos
-    let studentFromDesc = '';
-    let teacherFromDesc = '';
-
-    // Patrón lookahead detiene la captura al encontrar: 🎹, 🏫, Programa:, Salón:, Unirse, \n o fin de string
-    const logicalDelimiters = /(?=\s*(?:🎹|🏫|Programa:|Salón:|Unirse|\n|$))/i;
-
-    const teacherMatch = new RegExp(`(?:Docente|Profesor(?:a)?):\\s*(.*?)${logicalDelimiters.source}`, 'is').exec(cleanDesc);
-    if (teacherMatch && teacherMatch[1]) {
-        teacherFromDesc = teacherMatch[1].trim();
-    }
-
-    const studentMatch = new RegExp(`Estudiante:\\s*(.*?)${logicalDelimiters.source}`, 'is').exec(cleanDesc);
-    if (studentMatch && studentMatch[1]) {
-        studentFromDesc = studentMatch[1].trim();
-    }
-
-    // Directiva 1: Fallback Estudiante (Si desc es nulo, buscar antes del primer guion en título)
-    const titleParts = title.split('-');
-    const studentTitleFallback = titleParts[0]?.trim() || '';
-    const teacherTitleFallback = (titleParts.length >= 2 ? titleParts[1]?.trim() : title) || '';
-
-    const studentNameHint = studentFromDesc || studentTitleFallback;
-    const teacherNameHint = teacherFromDesc || teacherTitleFallback;
 
     return {
         status,
