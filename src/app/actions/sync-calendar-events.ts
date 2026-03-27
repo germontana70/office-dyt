@@ -21,11 +21,12 @@ function normalizeText(text: string): string {
  * Resuelve el problema de "APELLIDO NOMBRE" vs "NOMBRE APELLIDO".
  */
 function flexibleMatch(nameA: string, nameB: string): boolean {
-    // Dividimos por espacios, guiones o comas para detectar tokens individuales
-    const tokensA = normalizeText(nameA).split(/[\s\-,]+/).filter(t => t.length > 2);
-    const tokensB = normalizeText(nameB).split(/[\s\-,]+/);
-    if (tokensA.length === 0) return false;
-    return tokensA.every(token => tokensB.some(b => b.includes(token) || token.includes(b)));
+    const tokensA = normalizeText(nameA).split(/[\s\-,]+/).filter(t => t.length >= 3);
+    const tokensB = normalizeText(nameB).split(/[\s\-,]+/).filter(t => t.length >= 3);
+    if (tokensA.length === 0 || tokensB.length === 0) return false;
+    
+    // Verificación de que CADA palabra del string de búsqueda exista exactamente en el string objetivo
+    return tokensA.every(tokenA => tokensB.includes(tokenA));
 }
 
 /**
@@ -80,31 +81,23 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
         for (const raw of rawEvents) {
             const parsed = parseGoogleCalendarEvent(raw.summary, raw.description, raw.calendarName);
 
-            // ── Directiva 1: Clasificación estricta por nombre de calendario ──────
-            // Canceladas: ÚNICAMENTE si el calendario origen es "Clases Canceladas"
-            const isCancelledCalendar = raw.calendarName.trim().toLowerCase() === 'clases canceladas';
-            // Reposiciones: Detección por título (independiente del calendario)
-            const isReposicion = /reposici[oó]n/i.test(raw.summary);
-
-            let effectiveStatus = parsed.status;
-            if (isCancelledCalendar) effectiveStatus = 'cancelled';
-            else if (isReposicion) effectiveStatus = 'makeup';
-
-            // ── Regla 1: Fuzzy Match Teacher por nombre completo ────────────────
+            // ── Paso 1: Identificación (Docente y Estudiante) ───────────────────
             let matchedTeacherName = parsed.teacherNameHint || 'DESCONOCIDO';
+            let isTeacherMatchedInBD = false;
+            
             if (parsed.teacherNameHint) {
                 const found = teachers.find((t: any) =>
                     flexibleMatch(parsed.teacherNameHint, t.name) ||
                     flexibleMatch(t.name, parsed.teacherNameHint)
                 );
-                if (found) matchedTeacherName = found.name;
+                if (found) {
+                    matchedTeacherName = found.name;
+                    isTeacherMatchedInBD = true;
+                }
             }
 
-            // ══════════════════════════════════════════════════════════════════
-            // REGLA 1: Fuzzy Match Student por nombre completo (descripción)
-            // ══════════════════════════════════════════════════════════════════
             let matchedStudentId: string | null = null;
-            let groupLabel: string | null = null;   // nombre del programa (Regla 2)
+            let groupLabel: string | null = null;
 
             if (parsed.studentNameHint) {
                 const found = students.find((s: any) => {
@@ -115,13 +108,9 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
                 if (found) matchedStudentId = found.id;
             }
 
-            // ══════════════════════════════════════════════════════════════════
-            // REGLA 2 (solo si Regla 1 falló): Buscar nickname del profesor
-            // en el TÍTULO del evento → clase grupal → extraer nombre del grupo
-            // ══════════════════════════════════════════════════════════════════
+            // REGLA 2 (Fallback): Buscar por nickname en título
             let regla2TeacherName: string | null = null;
-
-            if (!matchedStudentId) {
+            if (!isTeacherMatchedInBD || !matchedStudentId) {
                 const titleNorm = normalizeText(raw.summary);
                 const nickMatch = teachers.find((t: any) => {
                     const n1 = t.nickname_1 ? normalizeText(t.nickname_1) : null;
@@ -130,12 +119,9 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
                 });
 
                 if (nickMatch) {
-                    // Regla 2 acierta: identificamos al docente
                     regla2TeacherName = nickMatch.name;
                     matchedTeacherName = nickMatch.name;
-
-                    // Extraer nombre del grupo/programa: todo lo que va ANTES
-                    // del nickname del profesor en el título (ej. "PIANO (01)")
+                    isTeacherMatchedInBD = true;
                     const nick = normalizeText(nickMatch.nickname_1 || nickMatch.nickname_2 || '');
                     const dashIdx = titleNorm.indexOf(nick);
                     if (dashIdx > 0) {
@@ -146,35 +132,53 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
                 }
             }
 
-            // Warning SOLO si ambas reglas fallan
+            // ── Paso 2: Clasificación de Status y Arreglo de Cortocircuito ──────
+            const isCancelledCalendar = raw.calendarName.trim().toLowerCase() === 'clases canceladas';
+            const isReposicion = /reposici[oó]n/i.test(raw.summary);
+            let effectiveStatus = parsed.status;
+
+            if (isCancelledCalendar) {
+                effectiveStatus = 'CANCELLED';
+            } else if (isReposicion) {
+                effectiveStatus = 'makeup';
+            }
+
+            // Warning log logic
             const hasWarning = !matchedStudentId && !regla2TeacherName;
-            if (hasWarning) {
+            const hasTeacherWarning = !isTeacherMatchedInBD;
+
+            if (hasWarning || hasTeacherWarning) {
                 warningsList.push({
                     eventTitle: raw.summary,
                     date: raw.start,
                     calendarName: raw.calendarName,
-                    studentHint: parsed.studentNameHint || '(sin nombre en descripción)',
+                    studentHint: hasTeacherWarning ? `(Docente no reg): ${parsed.teacherNameHint}` : (parsed.studentNameHint || '(sin nombre en descripción)'),
                 });
             }
 
             // Construir notas finales
-            let finalNotes = parsed.notes;
+            let finalNotes = parsed.notes || '';
+            if (hasWarning) {
+                finalNotes = `[ALERTA: ESTUDIANTE NO ENCONTRADO EN BD - "${parsed.studentNameHint}"]\n\n${finalNotes}`;
+            }
             if (groupLabel) {
-                finalNotes = `[GRUPO: ${groupLabel}]\n${parsed.notes || ''}`;
-            } else if (hasWarning) {
-                finalNotes = `[ALERTA: ESTUDIANTE NO ENCONTRADO EN BD - "${parsed.studentNameHint}"]\n\n${parsed.notes}`;
+                finalNotes = `[GRUPO: ${groupLabel}]\n${finalNotes}`;
+            }
+            if (hasTeacherWarning) {
+                finalNotes = `[ALERTA: DOCENTE NO REGISTRADO - "${parsed.teacherNameHint}"]\n\n${finalNotes}`;
             }
 
-            // ── Construct Upsert Payload ─────────────────────────────────────────
+            // ── Construct Upsert Payload (Directiva 3: Forzar Sobrescritura) ──
             const payload: any = {
                 google_event_id: raw.id,
                 google_calendar_id: raw.calendarName,
                 teacher_name: matchedTeacherName,
+                // student_id se establece a null forzosamente si se desasignó, para borrar el residuo
                 student_id: matchedStudentId,
                 program_name: raw.calendarName,
                 event_date: raw.start,
                 event_end_time: raw.end,
-                status: effectiveStatus,       // Directiva 1: usa status estricto
+                status: effectiveStatus,
                 class_number: parsed.classNumber,
                 notes: finalNotes,
                 semester: semester,

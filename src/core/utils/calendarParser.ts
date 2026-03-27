@@ -7,7 +7,7 @@
  */
 
 export interface ParsedEventData {
-    status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'makeup';
+    status: 'scheduled' | 'completed' | 'cancelled' | 'CANCELLED' | 'rescheduled' | 'makeup';
     classNumber: number | null;
     isReposicion: boolean;
     notes: string;
@@ -64,23 +64,31 @@ export function parseGoogleCalendarEvent(
         }
     }
 
-    // 4. Extract Hints for fuzzy matching
-    // PRIORIDAD MÁXIMA: Contenido de la descripción (Estudiante / Profesor)
-    const studentFromDesc = /[Ee]studiante:\s*([^\n<]+)/i.exec(cleanDesc);
-    const teacherFromDesc = /[Pp]rofesor:\s*([^\n<]+)/i.exec(cleanDesc);
+    // 4. Extract Hints for fuzzy matching (Prioridad Máxima: Descripción)
+    // Directiva 1: Regex con Positive Lookahead por Límites Lógicos
+    let studentFromDesc = '';
+    let teacherFromDesc = '';
 
-    // FALLBACK: Parse title (Apellido - Nombre / Docente - Estudiante)
-    const parts = title.split('-').map(p => p.trim()).filter(p => p.length > 0);
-    const fallbackTeacher = parts.length >= 1 ? parts[0] : title;
-    const fallbackStudent = parts.length >= 2 ? parts[1] : '';
+    // Patrón lookahead detiene la captura al encontrar: 🎹, 🏫, Programa:, Salón:, Unirse, \n o fin de string
+    const logicalDelimiters = /(?=\s*(?:🎹|🏫|Programa:|Salón:|Unirse|\n|$))/i;
 
-    const studentNameHint = studentFromDesc 
-        ? studentFromDesc[1].trim() 
-        : fallbackStudent.trim();
-        
-    const teacherNameHint = teacherFromDesc 
-        ? teacherFromDesc[1].trim() 
-        : fallbackTeacher.trim();
+    const teacherMatch = new RegExp(`(?:Docente|Profesor(?:a)?):\\s*(.*?)${logicalDelimiters.source}`, 'is').exec(cleanDesc);
+    if (teacherMatch && teacherMatch[1]) {
+        teacherFromDesc = teacherMatch[1].trim();
+    }
+
+    const studentMatch = new RegExp(`Estudiante:\\s*(.*?)${logicalDelimiters.source}`, 'is').exec(cleanDesc);
+    if (studentMatch && studentMatch[1]) {
+        studentFromDesc = studentMatch[1].trim();
+    }
+
+    // Directiva 1: Fallback Estudiante (Si desc es nulo, buscar antes del primer guion en título)
+    const titleParts = title.split('-');
+    const studentTitleFallback = titleParts[0]?.trim() || '';
+    const teacherTitleFallback = (titleParts.length >= 2 ? titleParts[1]?.trim() : title) || '';
+
+    const studentNameHint = studentFromDesc || studentTitleFallback;
+    const teacherNameHint = teacherFromDesc || teacherTitleFallback;
 
     return {
         status,

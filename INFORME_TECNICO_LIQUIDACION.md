@@ -47,4 +47,23 @@ El sistema ahora opera bajo una **identidad delegada (OAuth2) estable**, impleme
 ## ✅ Resultados
 - **Reducción de Advertencias:** De 81 estudiantes "huérfanos" a 0.
 - **Soberanía Base de Datos:** `sync-calendar-events.ts` solo inyecta/upserta. Supabase gestiona la colisión mediante `google_event_id` y `randomUUID()`.
-- **Certidumbre Financiera:** La liquidación PDF correlaciona al centavo la matemática Front-End.
+---
+
+## 📅 Actualización: 2026-03-26
+
+### 🚀 Logros del Día
+- **Implementación Exitosa del Lookahead Regex (`calendarParser.ts`)**: Se optimizó la extracción de datos de la descripción para limpiar emojis y decoraciones de Google Calendar sin mutilar nombres ni apellidos. El parser ahora busca límites lógicos (`🎹`, `🏫`, `Programa:`, etc.) garantizando una captura limpia del 100% de la cadena.
+- **Restauración de la Cascada de 2 Reglas (`sync-calendar-events.ts`)**: Se re-estructuró el motor de matching. Regla 1 (Descripción) + Regla 2 (Título/Nickname) operan en cascada, logrando bajar drásticamente las advertencias de alumnos huérfanos (de 14 a 1).
+- **Hard Sync y Estabilidad de BD**: Se forzó el uso de `upsert` para que cada sincronización sobrescriba eventos corruptos o mal clasificados en el pasado, alineando la base de datos con el catálogo de maestros más reciente. Se solucionó el error `PGRST204` eliminando llaves inexistentes (`subtotal`) en el payload.
+
+---
+
+### 🚨 TAREA PENDIENTE (RELEVO)
+**Problema Detectado: Logical Bypass en Cancelaciones**
+Se identificó un fallo crítico en el orden de operaciones del bucle de sincronización. Actualmente, la identificación del estudiante en eventos del calendario "Clases canceladas" presenta intermitencias si la condición de cancelación interfiere con el flujo de identificación de la cascada.
+- **Estado Actual**: Se requiere asegurar que el orden sea estrictamente Identificar -> Clasificar.
+- **Solución Mañana**: Reestructurar el bucle en `sync-calendar-events.ts` para que sea un **ensamblaje lineal inquebrantable**:
+  1. Ejecutar Parser y Cascada (Regla 1 y 2) para identificar Docente y Estudiante SIEMPRE.
+  2. Evaluar el origen (calendario) para marcar el Status como `CANCELLED` al final.
+  3. Ejecutar el Upsert con toda la metadata identificada intacta (ID del estudiante y nombre del docente).
+
