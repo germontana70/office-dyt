@@ -24,7 +24,7 @@ const getDefaultDateRange = () => {
 export default async function PaymentsDashboardPage({
     searchParams
 }: {
-    searchParams: { start?: string; end?: string }
+    searchParams: Promise<{ start?: string; end?: string }>
 }) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -34,8 +34,9 @@ export default async function PaymentsDashboardPage({
     }
 
     const defaultRange = getDefaultDateRange();
-    const start = searchParams?.start || defaultRange.start;
-    const end = searchParams?.end || defaultRange.end;
+    const resolvedSearchParams = await searchParams;
+    const start = resolvedSearchParams?.start || defaultRange.start;
+    const end = resolvedSearchParams?.end || defaultRange.end;
 
     let teacherPayments: TeacherPaymentInfo[] = [];
 

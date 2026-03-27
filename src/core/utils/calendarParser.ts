@@ -7,7 +7,7 @@
  */
 
 export interface ParsedEventData {
-    status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+    status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'makeup';
     classNumber: number | null;
     isReposicion: boolean;
     notes: string;
@@ -29,73 +29,64 @@ export function parseGoogleCalendarEvent(
     calendarName: string
 ): ParsedEventData {
     const upperTitle = (title || '').toUpperCase();
-    const upperDesc = (description || '').toUpperCase();
-    const upperCal = (calendarName || '').toUpperCase();
+    const cleanDesc = (description || '').replace(/<[^>]*>?/gm, ''); // Sanitization HTML
+    const upperDesc = cleanDesc.toUpperCase();
+    const rawCalendarName = (calendarName || '').trim();
 
     // 1. Determine Status & Reposición
-    const isReposicion = upperTitle.includes('REPOSICION') || upperTitle.includes('REPOSICIÓN');
-    let status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' = 'scheduled';
+    // REGLA: Reposición ÚNICAMENTE si está en el título
+    const isReposicion = /reposici[oó]n/i.test(title);
+    let status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'makeup' = 'scheduled';
 
-    if (upperCal.includes('CLASES CANCELADAS') || upperCal.includes('CANCELADA')) {
+    // Regla Absoluta de Cancelación
+    if (rawCalendarName.toLowerCase() === 'clases canceladas') {
         status = 'cancelled';
-    } else if ((upperTitle.includes('CANCELAD') || upperTitle.includes('NO ASISTIO')) && !isReposicion) {
-        status = 'cancelled';
+    } else if (isReposicion) {
+        status = 'makeup';
     } else if (upperDesc.includes('COMPLETAD')) {
         status = 'completed';
     }
 
-    if (isReposicion && status === 'scheduled') {
-        // If it's a reposición and not explicitly cancelled, we consider it scheduled/rescheduled
-        // 'rescheduled' status in our DB usually means the ORIGINAL class was cancelled
-        // But a new event created as REPOSICIÓN acts as a 'completed' or 'scheduled' replacement.
-        // For now we map it to scheduled (if in future) or completed (if past), handled later.
-        status = 'scheduled';
-    }
-
     // 2. Extract Class Number (Altura)
-    // Matches "CLASE 8", "CL 08", "CLASE #8"
     let classNumber: number | null = null;
-    const classMatch = /(?:CLASE|CL)\s*#?\s*(\d+)/.exec(upperTitle + ' ' + upperDesc);
+    // Preferimos el título para la altura si está disponible
+    const classMatch = /(?:CLASE|CL)\s*#?\s*(\d+)/i.exec(title + ' ' + cleanDesc);
     if (classMatch && classMatch[1]) {
         classNumber = parseInt(classMatch[1], 10);
     }
 
-    // 3. Extract Hints for fuzzy matching
-    // PRIMARY: Read from description — format is:
-    // "👤 Estudiante: NOMBRE DEL ESTUDIANTE\n🎹 Profesor: NOMBRE DEL PROFESOR"
-    const rawDescription = description || '';
-    const studentFromDesc = /[Ee]studiante:\s*(.+)/i.exec(rawDescription);
-    const teacherFromDesc = /[Pp]rofesor:\s*(.+)/i.exec(rawDescription);
+    // 3. Extract Motivo Cancelación & Notes
+    let notes = cleanDesc;
+    if (status === 'cancelled') {
+        const motivoMatch = /Motivo(?: Cancelaci[oó]n)?:\s*([^\n]+)/i.exec(cleanDesc);
+        if (motivoMatch && motivoMatch[1]) {
+            notes = motivoMatch[1].trim();
+        }
+    }
 
-    // FALLBACK: Parse title — real format is "PROF - ESTUDIANTE - Clase N"
-    const parts = upperTitle.split('-').map(p => p.trim()).filter(p => p.length > 0);
-    const fallbackTeacher = parts.length >= 1 ? parts[0] : upperTitle;
+    // 4. Extract Hints for fuzzy matching
+    // PRIORIDAD MÁXIMA: Contenido de la descripción (Estudiante / Profesor)
+    const studentFromDesc = /[Ee]studiante:\s*([^\n<]+)/i.exec(cleanDesc);
+    const teacherFromDesc = /[Pp]rofesor:\s*([^\n<]+)/i.exec(cleanDesc);
+
+    // FALLBACK: Parse title (Apellido - Nombre / Docente - Estudiante)
+    const parts = title.split('-').map(p => p.trim()).filter(p => p.length > 0);
+    const fallbackTeacher = parts.length >= 1 ? parts[0] : title;
     const fallbackStudent = parts.length >= 2 ? parts[1] : '';
 
-    // Clean hints from common noise words
-    const cleanHint = (hint: string) => {
-        return hint
-            .replace(/CLASE\s*#?\d+/g, '')
-            .replace(/REPOSICION/g, '')
-            .replace(/REPOSICIÓN/g, '')
-            .replace(/CANCELADA/g, '')
-            .replace(/VIRTUAL/g, '')
-            .replace(/PRESENCIAL/g, '')
-            .trim();
-    };
-
-    const studentNameHint = cleanHint(
-        studentFromDesc ? studentFromDesc[1].trim() : fallbackStudent
-    );
-    const teacherNameHint = cleanHint(
-        teacherFromDesc ? teacherFromDesc[1].trim() : fallbackTeacher
-    );
+    const studentNameHint = studentFromDesc 
+        ? studentFromDesc[1].trim() 
+        : fallbackStudent.trim();
+        
+    const teacherNameHint = teacherFromDesc 
+        ? teacherFromDesc[1].trim() 
+        : fallbackTeacher.trim();
 
     return {
         status,
         classNumber,
         isReposicion,
-        notes: description || '',
+        notes,
         studentNameHint,
         teacherNameHint,
     };

@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { TeacherPaymentInfo } from '@/infra/services/payments';
 import { reportService } from '@/infra/services/reports';
 import { syncCalendarEventsAction } from '@/app/actions/sync-calendar-events';
-import { ChevronDown, ExternalLink, CreditCard, Clock, DollarSign, BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronDown, ExternalLink, CreditCard, Clock, DollarSign, BookOpen, ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
+
+type SyncWarning = { eventTitle: string; date: string; calendarName: string; studentHint: string };
+type ActiveTab = 'liquidacion' | 'advertencias';
 
 interface Props {
     initialPayments: TeacherPaymentInfo[];
@@ -17,24 +20,38 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
     const router = useRouter();
     const [payments, setPayments] = useState(initialPayments);
     const [selectedTeacher, setSelectedTeacher] = useState<TeacherPaymentInfo | null>(null);
+    const [activeTab, setActiveTab] = useState<ActiveTab>('liquidacion');
+    const [syncWarnings, setSyncWarnings] = useState<SyncWarning[]>([]);
+    const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | 'warn'; text: string } | null>(null);
 
     const [localStart, setLocalStart] = useState(startDate);
     const [localEnd, setLocalEnd] = useState(endDate);
     const [isSyncing, setIsSyncing] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: 'teacherName' | 'totalPayment', direction: 'asc' | 'desc' }>({ key: 'teacherName', direction: 'asc' });
+    const [warnSortKey, setWarnSortKey] = useState<'date' | 'eventTitle' | 'calendarName' | 'studentHint'>('date');
+    const [warnSortDir, setWarnSortDir] = useState<'asc' | 'desc'>('asc');
+    const [warnFilter, setWarnFilter] = useState('');
 
     const handleSync = async () => {
         setIsSyncing(true);
+        setSyncMessage(null);
         try {
             const res = await syncCalendarEventsAction(localStart, localEnd, "2026-1");
             if (res.success) {
-                alert(`✅ ${res.message}`);
+                const warnList = (res as any).warningsList as SyncWarning[] || [];
+                setSyncWarnings(warnList);
+                if (warnList.length > 0) {
+                    setSyncMessage({ type: 'warn', text: res.message });
+                    setActiveTab('advertencias');
+                } else {
+                    setSyncMessage({ type: 'success', text: res.message });
+                }
                 router.refresh();
             } else {
-                alert(`❌ Error: ${res.message}`);
+                setSyncMessage({ type: 'error', text: res.message });
             }
         } catch (error: any) {
-            alert(`❌ Error inesperado: ${error.message}`);
+            setSyncMessage({ type: 'error', text: `Error inesperado: ${error.message}` });
         } finally {
             setIsSyncing(false);
         }
@@ -96,12 +113,14 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
 
     const formatDateGMT5 = (dateStr: string) => {
         try {
+            // El backend ya entregó formato con offset o Zulu real, Date lo lee exacto.
+            const d = new Date(dateStr);
             return new Intl.DateTimeFormat('es-CO', {
                 timeZone: 'America/Bogota',
                 year: 'numeric',
                 month: 'short',
                 day: '2-digit'
-            }).format(new Date(dateStr));
+            }).format(d);
         } catch {
             return new Intl.DateTimeFormat('es-CO', {
                 timeZone: 'America/Bogota',
@@ -114,12 +133,14 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
 
     const formatTimeGMT5 = (dateStr: string) => {
         try {
+            // Nativo: previene doble corrección horaria de offsets Supabase vs Local
+            const d = new Date(dateStr);
             return new Intl.DateTimeFormat('es-CO', {
                 timeZone: 'America/Bogota',
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: true
-            }).format(new Date(dateStr));
+            }).format(d);
         } catch {
             return new Intl.DateTimeFormat('es-CO', {
                 timeZone: 'America/Bogota',
@@ -128,6 +149,21 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 hour12: true
             }).format(new Date());
         }
+    };
+
+    const getBadgeStyle = (status: string | null) => {
+        const s = (status || '').toLowerCase();
+        if (s === 'cancelled') return 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        if (s === 'makeup') return 'bg-amber-500/20 text-amber-500 border border-amber-500/30';
+        return 'bg-white/10 text-white/70 border border-white/5';
+    };
+
+    const getBadgeText = (status: string | null) => {
+        const s = (status || '').toLowerCase();
+        if (s === 'cancelled') return 'CANCELADA';
+        if (s === 'makeup') return 'REPOSICIÓN';
+        if (s === 'completed') return 'COMPLETADA';
+        return 'PROGRAMADA';
     };
 
     return (
@@ -205,7 +241,54 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 </div>
             </div>
 
-            {/* Tabla de Liquidación (Tipo Excel / Neon-Glass) */}
+            {/* Banner de feedback post-sincronización (reemplaza el alert) */}
+            {syncMessage && (
+                <div className={`flex items-center gap-3 px-5 py-3 mb-6 rounded-2xl border text-sm font-semibold backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-300 ${
+                    syncMessage.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                    syncMessage.type === 'warn'    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
+                                                    'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                }`}>
+                    {syncMessage.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                    {syncMessage.type === 'warn'    && <AlertTriangle className="w-4 h-4 shrink-0" />}
+                    {syncMessage.type === 'error'   && <AlertTriangle className="w-4 h-4 shrink-0" />}
+                    <span>{syncMessage.text}</span>
+                    <button onClick={() => setSyncMessage(null)} className="ml-auto text-white/40 hover:text-white transition-colors text-lg leading-none">&times;</button>
+                </div>
+            )}
+
+            {/* ── Tab Navigation ───────────────────────────────────────────────── */}
+            <div className="flex items-center gap-1 mb-6 bg-black/40 backdrop-blur-xl border border-white/5 rounded-2xl p-1.5 w-fit shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+                <button
+                    onClick={() => setActiveTab('liquidacion')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${
+                        activeTab === 'liquidacion'
+                            ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)]'
+                            : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <DollarSign className="w-3 h-3" />
+                    Liquidación
+                </button>
+                <button
+                    onClick={() => setActiveTab('advertencias')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${
+                        activeTab === 'advertencias'
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                            : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <AlertTriangle className="w-3 h-3" />
+                    Advertencias
+                    {syncWarnings.length > 0 && (
+                        <span className="bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                            {syncWarnings.length}
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            {/* ══════════════════ TAB: LIQUIDACIÓN ══════════════════ */}
+            {activeTab === 'liquidacion' && (
             <div className="glass overflow-hidden border border-white/10 rounded-[24px] bg-black/30 backdrop-blur-xl mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[900px]">
@@ -307,6 +390,106 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                     </table>
                 </div>
             </div>
+            )} {/* fin tab liquidacion */}
+
+            {/* ══════════════════ TAB: ADVERTENCIAS ══════════════════ */}
+            {activeTab === 'advertencias' && (
+            <div className="glass overflow-hidden border border-amber-500/20 rounded-[24px] bg-black/30 backdrop-blur-xl mb-12 shadow-[0_20px_50px_rgba(245,158,11,0.08)]">
+                {/* Header de la tabla */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-8 py-5 border-b border-amber-500/10 bg-amber-500/5">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        <h3 className="text-sm font-black uppercase tracking-widest text-amber-400">
+                            Alumnos Huérfanos — {syncWarnings.length} eventos sin cruzar
+                        </h3>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Filtrar por nombre, título o calendario..."
+                        value={warnFilter}
+                        onChange={(e) => setWarnFilter(e.target.value)}
+                        className="glass px-4 py-2 rounded-xl border border-amber-500/20 bg-amber-500/5 text-white placeholder-zinc-600 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500/40 w-full md:w-72 transition-all"
+                    />
+                </div>
+
+                {syncWarnings.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
+                        <CheckCircle2 className="w-10 h-10 mb-3 text-emerald-500/40" />
+                        <p className="text-sm font-semibold uppercase tracking-widest">Sin advertencias — todos los alumnos fueron cruzados</p>
+                        <p className="text-xs mt-1">Sincroniza para poblar este panel</p>
+                    </div>
+                ) : (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[860px]">
+                        <thead>
+                            <tr className="border-b border-white/5 bg-white/[0.02]">
+                                {([
+                                    ['date',          'Fecha / Hora'],
+                                    ['eventTitle',    'Título del Evento'],
+                                    ['calendarName',  'Calendario'],
+                                    ['studentHint',   'Nombre Extraído (Hint)'],
+                                ] as const).map(([key, label]) => (
+                                    <th
+                                        key={key}
+                                        onClick={() => {
+                                            if (warnSortKey === key) setWarnSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                                            else { setWarnSortKey(key as any); setWarnSortDir('asc'); }
+                                        }}
+                                        className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-amber-500/60 cursor-pointer hover:text-amber-400 transition-colors select-none"
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            {label}
+                                            <ChevronDown className={`w-3 h-3 transition-transform ${warnSortKey === key && warnSortDir === 'desc' ? 'rotate-180' : ''} ${warnSortKey !== key ? 'opacity-20' : 'text-amber-400'}`} />
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.03]">
+                            {[...syncWarnings]
+                                .filter(w =>
+                                    !warnFilter ||
+                                    w.studentHint.toLowerCase().includes(warnFilter.toLowerCase()) ||
+                                    w.eventTitle.toLowerCase().includes(warnFilter.toLowerCase()) ||
+                                    w.calendarName.toLowerCase().includes(warnFilter.toLowerCase())
+                                )
+                                .sort((a, b) => {
+                                    const va = a[warnSortKey] || '';
+                                    const vb = b[warnSortKey] || '';
+                                    return warnSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+                                })
+                                .map((w, i) => {
+                                    const d = new Date(w.date);
+                                    const dateStr = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+                                    const timeStr = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true }).format(d);
+                                    return (
+                                        <tr key={i} className="group hover:bg-amber-500/[0.03] transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="font-mono text-xs text-white/70">{dateStr}</div>
+                                                <div className="font-mono text-[10px] text-zinc-600">{timeStr}</div>
+                                            </td>
+                                            <td className="px-6 py-4 max-w-[280px]">
+                                                <p className="text-white text-xs font-semibold leading-tight truncate" title={w.eventTitle}>{w.eventTitle}</p>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-primary/60 bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
+                                                    {w.calendarName}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-amber-300 font-mono text-xs bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+                                                    {w.studentHint}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                        </tbody>
+                    </table>
+                </div>
+                )}
+            </div>
+            )} {/* fin tab advertencias */}
 
             {/* Modal de Detalle (Glassmorphism Modal) */}
             {selectedTeacher && (
@@ -366,40 +549,69 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
 
                         <div className="space-y-3 relative z-10">
                             <h4 className="text-sm font-semibold text-muted-foreground tracking-widest uppercase mb-4">Registro de Clases</h4>
-                            {selectedTeacher.sessions.map((s, i) => (
-                                <div key={i} className="glass p-4 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center hover:bg-white/10 transition-colors">
-                                    <div>
-                                        <p className="font-semibold text-white mb-1 flex items-center flex-wrap gap-2">
-                                            <span>{s.students ? `${s.students.first_name} ${s.students.last_name}` : 'Estudiante N/A'}</span>
-                                            <span className="text-primary/70 text-sm">| {s.program_name}</span>
-                                            {s.class_number && <span className="text-muted-foreground text-xs uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/10">Clase {s.class_number}</span>}
-                                        </p>
-                                        <div className="flex items-center gap-3">
-                                            <p className="text-xs text-muted-foreground font-mono flex items-center gap-1">
-                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                {formatDateGMT5(s.event_date)}
-                                            </p>
-                                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                                                {s.status}
-                                            </span>
+                            {selectedTeacher.sessions.map((s, i) => {
+                                const isCancelled = (s.status || '').toLowerCase() === 'cancelled';
+                                const subtotal = isCancelled ? 0 : Math.round(selectedTeacher.hourlyRate * (((new Date(s.event_end_time || s.event_date).getTime() - new Date(s.event_date).getTime()) / (1000 * 60 * 60)) || 1));
+
+                                // Extracción segura del estudiante / grupo
+                                let studentName = 'Estudiante No Registrado';
+                                if (s.students) {
+                                    studentName = `${s.students.first_name} ${s.students.last_name}`;
+                                } else if (s.notes) {
+                                    const cleanNotes = s.notes.replace(/<[^>]*>?/gm, '');
+                                    // Regla 2: clase grupal identificada por nickname del profesor
+                                    const grupoMatch = /^\[GRUPO:\s*([^\]]+)\]/i.exec(cleanNotes);
+                                    if (grupoMatch && grupoMatch[1]) {
+                                        studentName = `🎵 ${grupoMatch[1].trim()}`;
+                                    } else {
+                                        // Fallback Regla 1: descripción con etiqueta Estudiante:
+                                        const match = /[Ee]studiante:\s*([^\n]+)/i.exec(cleanNotes);
+                                        if (match && match[1]) studentName = match[1].trim();
+                                    }
+                                }
+
+                                return (
+                                    <div key={i} className={`glass p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col hover:bg-white/10 transition-colors ${isCancelled ? 'opacity-60 grayscale' : ''}`}>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-semibold text-white mb-1 flex items-center flex-wrap gap-2">
+                                                    <span>{studentName}</span>
+                                                    <span className="text-primary/70 text-sm">| {s.program_name}</span>
+                                                    {s.class_number && <span className="text-muted-foreground text-xs uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full border border-white/10">Clase {s.class_number}</span>}
+                                                </p>
+                                                <div className="flex items-center gap-3 mt-1">
+                                                    <p className="text-xs text-muted-foreground font-mono flex items-center gap-1">
+                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        {formatDateGMT5(s.event_date)}
+                                                    </p>
+                                                    <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${getBadgeStyle(s.status)}`}>
+                                                        {getBadgeText(s.status)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {s.event_end_time && (
+                                                <div className="text-right flex flex-col items-end">
+                                                    <p className="text-xs font-mono text-white/50 mb-1">
+                                                        {formatTimeGMT5(s.event_date)}
+                                                        {' - '}
+                                                        {formatTimeGMT5(s.event_end_time)}
+                                                    </p>
+                                                    <p className={`text-xs font-bold ${isCancelled ? 'text-zinc-500 line-through' : 'text-primary/80'}`}>
+                                                        {Math.round(((new Date(s.event_end_time).getTime() - new Date(s.event_date).getTime()) / (1000 * 60 * 60)) * 100) / 100} h
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
+                                        {isCancelled && s.notes && (
+                                            <div className="mt-3 text-xs bg-black/40 border border-white/5 p-2 rounded text-zinc-400 italic font-mono whitespace-pre-wrap">
+                                                Motivo: {s.notes.substring(0, 150)}{s.notes.length > 150 ? '...' : ''}
+                                            </div>
+                                        )}
                                     </div>
-                                    {s.event_end_time && (
-                                        <div className="text-right">
-                                            <p className="text-xs font-mono text-white/50 mb-1">
-                                                {formatTimeGMT5(s.event_date)}
-                                                {' - '}
-                                                {formatTimeGMT5(s.event_end_time)}
-                                            </p>
-                                            <p className="text-xs font-bold text-primary/80">
-                                                {Math.round(((new Date(s.event_end_time).getTime() - new Date(s.event_date).getTime()) / (1000 * 60 * 60)) * 100) / 100} h
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

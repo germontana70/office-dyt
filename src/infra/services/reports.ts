@@ -51,21 +51,65 @@ export const reportService = {
         doc.setFont('helvetica', 'bold');
         doc.text('DESGLOSE DE ACTIVIDADES', 14, (doc as any).lastAutoTable.finalY + 15);
 
-        const tableData = p.sessions.map(s => [
-            new Date(s.event_date).toLocaleDateString(),
-            s.program_name,
-            s.status || 'N/A',
-            '1.0 h',
-            `$ ${p.hourlyRate.toLocaleString()}`
-        ]);
+        const tableData: any[][] = [];
+
+        p.sessions.forEach(s => {
+            const isCancelled = (s.status || '').toLowerCase() === 'cancelled';
+            const rawHours = s.event_end_time 
+                ? (new Date(s.event_end_time).getTime() - new Date(s.event_date).getTime()) / (1000 * 60 * 60)
+                : 1;
+            const hours = Math.round(rawHours * 100) / 100;
+            const effHours = isCancelled ? 0 : hours;
+            const subtotal = effHours * p.hourlyRate;
+
+            let studentName = 'No Registrado';
+            if (s.students) {
+                studentName = `${s.students.first_name} ${s.students.last_name}`;
+            } else if (s.notes) {
+                const match = /[Ee]studiante[:\s]+([^\n]+)/.exec(s.notes);
+                if (match && match[1]) studentName = match[1].trim();
+            }
+
+            // Format date forcing America/Bogota correctly from UTC
+            let dateTimeGMT5 = s.event_date;
+            try {
+                const d = new Date(s.event_date);
+                const datePart = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+                const timePart = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true }).format(d);
+                dateTimeGMT5 = `${datePart}\n${timePart}`;
+            } catch {
+                dateTimeGMT5 = new Date(s.event_date).toLocaleString();
+            }
+
+            let badgeStatus = 'PROGRAMADA';
+            if (s.status === 'cancelled') badgeStatus = 'CANCELADA';
+            else if (s.status === 'makeup') badgeStatus = 'REPOSICIÓN';
+            else if (s.status === 'completed') badgeStatus = 'COMPLETADA';
+
+            tableData.push([
+                dateTimeGMT5,
+                studentName,
+                s.program_name,
+                s.class_number ? `Clase ${s.class_number}` : 'N/A',
+                badgeStatus,
+                `${effHours} h`,
+                `$ ${subtotal.toLocaleString()}`
+            ]);
+
+            if (isCancelled && s.notes) {
+                tableData.push([
+                    { content: `Motivo: ${s.notes}`, colSpan: 7, styles: { fontStyle: 'italic', textColor: [200, 50, 50] } }
+                ]);
+            }
+        });
 
         autoTable(doc, {
             startY: (doc as any).lastAutoTable.finalY + 20,
-            head: [['Fecha', 'Programa', 'Estado', 'Horas', 'Subtotal']],
+            head: [['Fecha / Hora', 'Estudiante', 'Programa', 'Altura', 'Estado', 'Horas', 'Subtotal']],
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [50, 50, 50], textColor: 255 },
-            styles: { fontSize: 9 },
+            styles: { fontSize: 8 },
         });
 
         // --- Firma y Pie de Página ---
