@@ -169,6 +169,9 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
 
             // Construir notas finales seguras
             let finalNotes = parsed.notes || '';
+            if (parsed.studentNameHint) {
+                finalNotes = `[STUDENT_HINT: ${parsed.studentNameHint}]\n${finalNotes}`;
+            }
             if (hasWarning) {
                 finalNotes = `[ALERTA: ESTUDIANTE NO ENCONTRADO EN BD - "${parsed.studentNameHint || '(Estudiante no identificado)'}"]\n\n${finalNotes}`;
             }
@@ -185,6 +188,19 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
             const existingId = existingEventsMap.get(raw.id);
             payload.id = existingId ? existingId : crypto.randomUUID();
 
+            // --- INICIO DIAGNÓSTICO CLASES CANCELADAS ---
+            const isCancelledCal = raw.calendarName && raw.calendarName.toLowerCase().includes('canceladas');
+            if (isCancelledCal) {
+                console.log("==========================================");
+                console.log(`🔍 EVENTO CANCELADO: ${raw.summary}`);
+                console.log(`📝 1. Raw Desc (Primeros 100 chars):`, raw.description ? raw.description.substring(0, 100).replace(/\n/g, ' ') : 'NULL');
+                console.log(`🤖 2. Nombre extraído por Parser: "${parsed.studentNameHint}"`);
+                console.log(`🔎 3. ID Matcheado en BD: ${matchedStudentId ? matchedStudentId : 'FALLÓ FLEXIBLE MATCH'}`);
+                console.log(`📦 4. Payload Final Student ID: ${payload.student_id}`);
+                console.log("==========================================");
+            }
+            // --- FIN DIAGNÓSTICO CLASES CANCELADAS ---
+
             batchUpserts.push(payload);
         }
 
@@ -198,6 +214,41 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
                 console.error('Error insertando chunk en Supabase:', error);
                 throw new Error(`Error BD en Supabase: ${error.message}`);
             }
+        }
+
+        // 6. Purga de Eventos Huérfanos (Fantasmas eliminados de GCal)
+        const validGoogleIds = batchUpserts.map(p => p.google_event_id);
+        let deletedCount = 0;
+
+        if (validGoogleIds.length > 0) {
+            // Utilizamos el not() con in() acotado por el rango temporal estricto de sync
+            const { data: deletedData, error: deleteError } = await supabase
+                .from('calendar_events')
+                .delete()
+                .gte('event_date', timeMin)
+                .lte('event_date', timeMax)
+                .not('google_event_id', 'in', `(${validGoogleIds.join(',')})`)
+                .select('id');
+
+            if (deleteError) {
+                console.error('[SYNC ENGINE] Error purgando fantasmas:', deleteError);
+            } else {
+                deletedCount = deletedData?.length || 0;
+            }
+        } else {
+            // Protección: Si en este periodo real ya no viene nada, se barre todo el mes asumiendo borrado masivo.
+            const { data: deletedData } = await supabase
+                .from('calendar_events')
+                .delete()
+                .gte('event_date', timeMin)
+                .lte('event_date', timeMax)
+                .select('id');
+                
+            deletedCount = deletedData?.length || 0;
+        }
+
+        if (deletedCount > 0) {
+            console.log(`[SYNC ENGINE] 👻 Limpieza de Huérfanos: ${deletedCount} evento(s) fantasma destruido(s).`);
         }
 
         const warningsCount = warningsList.length;

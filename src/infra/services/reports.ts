@@ -62,12 +62,40 @@ export const reportService = {
             const effHours = isCancelled ? 0 : hours;
             const subtotal = effHours * p.hourlyRate;
 
-            let studentName = 'No Registrado';
+            let studentName = '';
+            
+            // 1. Objeto relacional
             if (s.students) {
-                studentName = `${s.students.first_name} ${s.students.last_name}`;
-            } else if (s.notes) {
-                const match = /[Ee]studiante[:\s]+([^\n]+)/.exec(s.notes);
-                if (match && match[1]) studentName = match[1].trim();
+                studentName = `${s.students.first_name} ${s.students.last_name}`.trim();
+            }
+            // 2. Fallbacks de notas y advertencias
+            if (!studentName) {
+                const watermarkMatch = /\[STUDENT_HINT:\s*([^\]]+)\]/i.exec(s.notes || '');
+                if (watermarkMatch && watermarkMatch[1]) {
+                    studentName = watermarkMatch[1].trim();
+                } else if ((s as any).student_name_hint) {
+                    studentName = (s as any).student_name_hint;
+                } else if (s.notes) {
+                    const cleanNotes = s.notes.replace(/<[^>]*>?/gm, '');
+                    const grupoMatch = /^\[GRUPO:\s*([^\]]+)\]/i.exec(cleanNotes);
+                    
+                    if (grupoMatch && grupoMatch[1]) {
+                        studentName = `🎵 ${grupoMatch[1].trim()}`;
+                    } else {
+                        const match = /[Ee]studiante:\s*([^\n]+)/i.exec(cleanNotes);
+                        if (match && match[1]) {
+                            studentName = match[1].trim();
+                        } else {
+                            const alertMatch = /ESTUDIANTE NO ENCONTRADO EN BD -\s*"([^"]+)"\]/i.exec(cleanNotes);
+                            if (alertMatch && alertMatch[1]) studentName = alertMatch[1].trim();
+                        }
+                    }
+                }
+            }
+            
+            // 3. Fallback final
+            if (!studentName) {
+                studentName = s.program_name || '';
             }
 
             // Format date forcing America/Bogota correctly from UTC
@@ -81,10 +109,11 @@ export const reportService = {
                 dateTimeGMT5 = new Date(s.event_date).toLocaleString();
             }
 
+            const statusUpper = (s.status || '').toUpperCase();
             let badgeStatus = 'PROGRAMADA';
-            if (s.status === 'cancelled') badgeStatus = 'CANCELADA';
-            else if (s.status === 'makeup') badgeStatus = 'REPOSICIÓN';
-            else if (s.status === 'completed') badgeStatus = 'COMPLETADA';
+            if (statusUpper === 'CANCELLED' || statusUpper === 'CANCELADA') badgeStatus = 'CANCELADA';
+            else if (statusUpper === 'MAKEUP' || statusUpper === 'REPOSICIÓN') badgeStatus = 'REPOSICIÓN';
+            else if (statusUpper === 'COMPLETED' || statusUpper === 'COMPLETADA') badgeStatus = 'COMPLETADA';
 
             tableData.push([
                 dateTimeGMT5,
@@ -97,8 +126,28 @@ export const reportService = {
             ]);
 
             if (isCancelled && s.notes) {
+                let displayNotes = s.notes || '';
+                
+                // 1. Ocultar marcas de agua técnicas
+                displayNotes = displayNotes.replace(/\[(?:STUDENT_HINT|GRUPO|ALERTA)[\s\S]*?\]/gi, '').trim();
+
+                // 2. Extraer SOLO el motivo real si existe (corta en el primer salto de línea o emoji)
+                const motiveMatch = /(?:Motivo|Cancelada)[\s:-]*([^\n]+)/i.exec(displayNotes);
+                if (motiveMatch && motiveMatch[1]) {
+                    // Limpia basura residual del match aislando hasta el primer emoji o pipe
+                    displayNotes = `Motivo: ${motiveMatch[1].split(/(?:📅|🎵|\||¡)/)[0].trim()}`;
+                } else {
+                    // Si no hay motivo claro, corta la plantilla gigante de GCal
+                    displayNotes = displayNotes.split(/(?:Unirse|¡Hola|CLASE DE MÚSICA|En la Escuela)/i)[0].trim();
+                    if (displayNotes.length > 100) displayNotes = displayNotes.substring(0, 100) + '...';
+                    displayNotes = `Motivo: ${displayNotes}`;
+                }
+
+                // 3. Destruir Emojis y caracteres no-ASCII que rompen jsPDF
+                displayNotes = displayNotes.replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+
                 tableData.push([
-                    { content: `Motivo: ${s.notes}`, colSpan: 7, styles: { fontStyle: 'italic', textColor: [200, 50, 50] } }
+                    { content: displayNotes, colSpan: 7, styles: { fontStyle: 'italic', textColor: [200, 50, 50] } }
                 ]);
             }
         });
