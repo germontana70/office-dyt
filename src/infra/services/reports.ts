@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { TeacherPaymentInfo } from './payments';
+import { resolveStudentLabel } from '@/core/utils/resolveStudentLabel';
 
 export const reportService = {
     /**
@@ -62,41 +63,8 @@ export const reportService = {
             const effHours = isCancelled ? 0 : hours;
             const subtotal = effHours * p.hourlyRate;
 
-            let studentName = '';
-            
-            // 1. Objeto relacional
-            if (s.students) {
-                studentName = `${s.students.first_name} ${s.students.last_name}`.trim();
-            }
-            // 2. Fallbacks de notas y advertencias
-            if (!studentName) {
-                const watermarkMatch = /\[STUDENT_HINT:\s*([^\]]+)\]/i.exec(s.notes || '');
-                if (watermarkMatch && watermarkMatch[1]) {
-                    studentName = watermarkMatch[1].trim();
-                } else if ((s as any).student_name_hint) {
-                    studentName = (s as any).student_name_hint;
-                } else if (s.notes) {
-                    const cleanNotes = s.notes.replace(/<[^>]*>?/gm, '');
-                    const grupoMatch = /^\[GRUPO:\s*([^\]]+)\]/i.exec(cleanNotes);
-                    
-                    if (grupoMatch && grupoMatch[1]) {
-                        studentName = `🎵 ${grupoMatch[1].trim()}`;
-                    } else {
-                        const match = /[Ee]studiante:\s*([^\n]+)/i.exec(cleanNotes);
-                        if (match && match[1]) {
-                            studentName = match[1].trim();
-                        } else {
-                            const alertMatch = /ESTUDIANTE NO ENCONTRADO EN BD -\s*"([^"]+)"\]/i.exec(cleanNotes);
-                            if (alertMatch && alertMatch[1]) studentName = alertMatch[1].trim();
-                        }
-                    }
-                }
-            }
-            
-            // 3. Fallback final
-            if (!studentName) {
-                studentName = s.program_name || '';
-            }
+            // Resolución discriminada: 1a1 → nombre alumno | Grupal → nombre programa
+            const studentName = resolveStudentLabel(s);
 
             // Format date forcing America/Bogota correctly from UTC
             let dateTimeGMT5 = s.event_date;

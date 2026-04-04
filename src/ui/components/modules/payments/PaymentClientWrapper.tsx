@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TeacherPaymentInfo } from '@/infra/services/payments';
 import { reportService } from '@/infra/services/reports';
+import { resolveStudentLabel } from '@/core/utils/resolveStudentLabel';
 import { syncCalendarEventsAction } from '@/app/actions/sync-calendar-events';
 import { ChevronDown, ExternalLink, CreditCard, Clock, DollarSign, BookOpen, ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
@@ -553,45 +554,8 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                                 const isCancelled = (s.status || '').toLowerCase() === 'cancelled';
                                 const subtotal = isCancelled ? 0 : Math.round(selectedTeacher.hourlyRate * (((new Date(s.event_end_time || s.event_date).getTime() - new Date(s.event_date).getTime()) / (1000 * 60 * 60)) || 1));
 
-                                // Extracción segura del estudiante / grupo
-                                let studentName = '';
-                                
-                                // 1. Prioridad máxima: Relación SQL directa
-                                if (s.students) {
-                                    studentName = `${s.students.first_name} ${s.students.last_name}`.trim();
-                                }
-                                
-                                // 2. Fallbacks lógicos si el alumno no cruzó
-                                if (!studentName) {
-                                    const watermarkMatch = /\[STUDENT_HINT:\s*([^\]]+)\]/i.exec(s.notes || '');
-                                    if (watermarkMatch && watermarkMatch[1]) {
-                                        studentName = watermarkMatch[1].trim();
-                                    } else if ((s as any).student_name_hint) {
-                                        studentName = (s as any).student_name_hint;
-                                    } else if (s.notes) {
-                                        const cleanNotes = s.notes.replace(/<[^>]*>?/gm, '');
-                                        // A. Clase grupal identificada
-                                        const grupoMatch = /^\[GRUPO:\s*([^\]]+)\]/i.exec(cleanNotes);
-                                        if (grupoMatch && grupoMatch[1]) {
-                                            studentName = `🎵 ${grupoMatch[1].trim()}`;
-                                        } else {
-                                            // B. Ticket crudo de la descripción original
-                                            const match = /[Ee]studiante:\s*([^\n]+)/i.exec(cleanNotes);
-                                            if (match && match[1]) {
-                                                studentName = match[1].trim();
-                                            } else {
-                                                // C. Rescate desde la bitácora de alertas de sincro
-                                                const alertMatch = /ESTUDIANTE NO ENCONTRADO EN BD -\s*"([^"]+)"\]/i.exec(cleanNotes);
-                                                if (alertMatch && alertMatch[1]) studentName = alertMatch[1].trim();
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // 3. Último recurso
-                                if (!studentName) {
-                                    studentName = s.program_name || 'Estudiante No Registrado';
-                                }
+                                // Resolución discriminada: 1a1 → nombre alumno | Grupal → nombre programa
+                                const studentName = resolveStudentLabel(s);
 
                                 let displayNotes = s.notes || '';
                                 if (displayNotes) {
