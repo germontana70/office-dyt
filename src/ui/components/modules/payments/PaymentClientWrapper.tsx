@@ -47,7 +47,9 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 } else {
                     setSyncMessage({ type: 'success', text: res.message });
                 }
-                router.refresh();
+                // Navegar a la URL con las fechas sincronizadas para que el
+                // servidor recargue los datos del periodo correcto
+                router.push(`/dashboard/payments?start=${localStart}&end=${localEnd}`);
             } else {
                 setSyncMessage({ type: 'error', text: res.message });
             }
@@ -506,7 +508,7 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                             </div>
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => reportService.generateTeacherPDF(selectedTeacher, startDate, endDate)}
+                                    onClick={() => reportService.generateTeacherPDF(selectedTeacher, localStart, localEnd)}
                                     className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold text-xs tracking-widest uppercase hover:bg-white/20 transition-colors border border-white/10"
                                 >
                                     PDF Deta.

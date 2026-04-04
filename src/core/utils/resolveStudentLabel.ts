@@ -66,7 +66,7 @@ export function resolveStudentLabel(session: ClassSession): string {
 
     // ── PASO 0: Cortocircuito grupal ──────────────────────────────────────────
     if (isProgramaGrupal(programName)) {
-        return programName;
+        return `Clase Grupal - ${programName}`;
     }
 
     // ── CASCADA 1a1 ───────────────────────────────────────────────────────────
