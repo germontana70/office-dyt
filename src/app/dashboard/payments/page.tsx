@@ -59,6 +59,7 @@ export default async function PaymentsDashboardPage({
     return (
         <div style={{ padding: '2rem', maxWidth: '1400px', marginInline: 'auto' }}>
             <PaymentClientWrapper
+                key={`${start}-${end}`}
                 initialPayments={teacherPayments}
                 startDate={start}
                 endDate={end}

@@ -63,8 +63,22 @@ export function isProgramaGrupal(programName: string): boolean {
  */
 export function resolveStudentLabel(session: ClassSession): string {
     const programName = session.program_name || '';
+    const notes = session.notes || '';
 
-    // ── PASO 0: Cortocircuito grupal ──────────────────────────────────────────
+    // ── PASO -1: Detección PRIORITARIA por tag [GRUPO:] en notes ─────────────
+    // El sincronizador inyecta [GRUPO: Nombre del Programa] cuando detecta una
+    // clase grupal via nicknames del docente. Ejemplo:
+    //   program_name = "SALÓN 206"  (calendario GCal)
+    //   notes        = "[GRUPO: Aprestamiento Musical (01)]..."
+    // → Retornar "Clase Grupal - Aprestamiento Musical (01)"
+    if (notes) {
+        const grupoTagMatch = /\[GRUPO:\s*([^\]]+)\]/i.exec(notes);
+        if (grupoTagMatch?.[1]) {
+            return `Clase Grupal - ${grupoTagMatch[1].trim()}`;
+        }
+    }
+
+    // ── PASO 0: Cortocircuito grupal por nombre de programa ───────────────────
     if (isProgramaGrupal(programName)) {
         return `Clase Grupal - ${programName}`;
     }
@@ -76,8 +90,6 @@ export function resolveStudentLabel(session: ClassSession): string {
         const fullName = `${session.students.first_name} ${session.students.last_name}`.trim();
         if (fullName) return fullName;
     }
-
-    const notes = session.notes || '';
 
     // 2. Watermark de identidad inyectada durante la sincronización
     if (notes) {
