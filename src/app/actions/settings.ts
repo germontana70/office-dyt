@@ -75,8 +75,8 @@ export async function getProgramPricesBySemester(semester: string) {
     try {
         const { data: dytPrices, error: dytPricesError } = await supabase
             .from('dyt_program_prices')
-            // Seleccionamos las columnas correctas de la nueva bóveda
-            .select('id, program_name, cash_price, increment_percentage, installments, semester')
+            // Seleccionamos todas las columnas relevantes de la bóveda (incluye total_classes)
+            .select('id, program_name, cash_price, increment_percentage, total_classes, installments, semester')
             .eq('semester', semester);
 
         console.log('[FINANCE] Programas recibidos (dyt_program_prices):', dytPrices);

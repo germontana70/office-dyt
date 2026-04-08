@@ -1,13 +1,4 @@
-# INFORME TÉCNICO DE INGENIERÍA: OFFICE DYT
-
-**Fecha:** 28 de Marzo de 2026
-**Módulo:** Motor de Liquidación de Honorarios (Payments & Sincronizador)
-**Autor:** Antigravity (AI Backend & TechWriter)
-
-## Resumen Ejecutivo
-El presente documento certifica la resolución definitiva de la falla crítica "Estudiante No Registrado", anomalía que ocultaba la identidad de los estudiantes y perjudicaba el detalle de liquidación de los docentes (particularmente frente a clases canceladas o reprogramadas). 
-
-El origen del bug radicaba en la política de protección transaccional **Zero-DDL**, que limitaba la alteración de bases de datos, permitiendo que triggers y reglas heredadas de SIA 2.0 anularan silenciosamente ciertos `student_id`. A través de la implementación de tres capas estratégicas de ingeniería, se ha logrado blindar la interoperabilidad entre Google Calendar y Supabase: la identidad del alumno viaja intacta, la interfaz permanece pulcra, y el motor del calendario expurga exitosamente las anomalías residuales ("Fantasmas").
+cra, y el motor del calendario expurga exitosamente las anomalías residuales ("Fantasmas").
 
 ---
 
@@ -46,4 +37,13 @@ Gracias a los bloqueos construidos en las 3 etapas anteriores, el módulo de ext
 - **Mapeo de Estados Correctos:** La validación se adaptó a reglas binarias de estandarización en mayúsculas (`CANCELLED`, `MAKEUP`) renderizando invariablemente etiquetas oficiales (`CANCELADA`, `REPOSICIÓN`), certificando al 100% las cuentas de cobro institucionales docentes.
 
 ---
-> _Snapshot Documental Listo. Destino para ingesta: Sistema NotebookLM del Cliente._
+> _Snapshot Documental Listo. Destino para ingesta: Sistema NotebookLM del Cliente.# INFORME TÉCNICO DE INGENIERÍA: OFFICE DYT
+
+**Fecha:** 28 de Marzo de 2026
+**Módulo:** Motor de Liquidación de Honorarios (Payments & Sincronizador)
+**Autor:** Antigravity (AI Backend & TechWriter)
+
+## Resumen Ejecutivo
+El presente documento certifica la resolución definitiva de la falla crítica "Estudiante No Registrado", anomalía que ocultaba la identidad de los estudiantes y perjudicaba el detalle de liquidación de los docentes (particularmente frente a clases canceladas o reprogramadas). 
+
+El origen del bug radicaba en la política de protección transaccional **Zero-DDL**, que limitaba la alteración de bases de datos, permitiendo que triggers y reglas heredadas de SIA 2.0 anularan silenciosamente ciertos `student_id`. A través de la implementación de tres capas estratégicas de ingeniería, se ha logrado blindar la interoperabilidad entre Google Calendar y Supabase: la identidad del alumno viaja intacta, la interfaz permanece pul_

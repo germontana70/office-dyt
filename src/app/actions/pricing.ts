@@ -32,6 +32,7 @@ export async function updatePricingVault(prices: ProgramPrice[], semester: strin
         // ✅ DIRECTIVA: El % de incremento es específico por programa. No asumir valor global.
         // Si viene undefined (caso raro), usar 0 para no aplicar incremento arbitrario.
         const increment_percentage = Number(price.increment_percentage ?? 0);
+        const total_classes = Number(price.total_classes ?? 16);
         
         // Misión 1: Total Diferido Dinámico (Redondeo 10k)
         const realTotal = roundUp10k(cash_price * (1 + (increment_percentage / 100)));
@@ -73,6 +74,7 @@ export async function updatePricingVault(prices: ProgramPrice[], semester: strin
             program_name: pName,
             cash_price: cash_price,
             increment_percentage: increment_percentage,
+            total_classes: total_classes,
             installments: installments
         };
     });
@@ -89,5 +91,7 @@ export async function updatePricingVault(prices: ProgramPrice[], semester: strin
     }
 
     revalidatePath('/dashboard/configuracion/precios');
+    revalidatePath('/dashboard/configuracion');
+    revalidatePath('/dashboard/matriculas');
     return { success: true };
 }

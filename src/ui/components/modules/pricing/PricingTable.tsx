@@ -54,6 +54,7 @@ export function PricingTable({ prices, semester }: PricingTableProps) {
                 program_name: '',
                 cash_price: 0,
                 increment_percentage: 0, // ✅ Configurar el % específico de este programa en la Bóveda
+                total_classes: 16,
             }
         ]);
     };
@@ -146,9 +147,10 @@ export function PricingTable({ prices, semester }: PricingTableProps) {
                     <thead className="sticky top-0 z-10 bg-black/80 backdrop-blur-xl">
                         <tr className="border-b border-white/10 text-[11px] uppercase tracking-widest text-primary/70">
                             <th className="p-4 font-black">Programa Académico</th>
-                            <th className="p-4 font-black w-64">Valor Contado</th>
-                            <th className="p-4 font-black w-72">% Incremento (Cuotas)</th>
-                            <th className="p-4 font-black w-72">Total Financiado (Redondeado)</th>
+                            <th className="p-4 font-black w-48">Valor Contado</th>
+                            <th className="p-4 font-black w-32">Clases Totales</th>
+                            <th className="p-4 font-black w-64">% Incremento (Cuotas)</th>
+                            <th className="p-4 font-black w-64">Total Financiado (Redondeado)</th>
                             <th className="p-4 font-black text-center w-24">Acciones</th>
                         </tr>
                     </thead>
@@ -173,6 +175,24 @@ export function PricingTable({ prices, semester }: PricingTableProps) {
                                             onChange={(e) => handleFieldChange(idx, 'cash_price', Number(e.target.value))}
                                             className="w-full bg-black/40 border border-white/10 group-hover/input:border-primary/50 group-hover/input:bg-black/60 rounded-xl py-3 pl-8 pr-3 text-white font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-lg tracking-tight"
                                         />
+                                    </div>
+                                </td>
+                                <td className="p-4">
+                                    <div className="relative group/select">
+                                        <select
+                                            value={price.total_classes ?? 16}
+                                            onChange={(e) => handleFieldChange(idx, 'total_classes', Number(e.target.value))}
+                                            className="w-full bg-black/40 border border-white/10 group-hover/select:border-primary/50 group-hover/select:bg-black/60 rounded-xl py-3 px-4 text-white font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-lg tracking-tight appearance-none cursor-pointer"
+                                        >
+                                            <option value={8} className="bg-zinc-900 text-white">8 Clases</option>
+                                            <option value={12} className="bg-zinc-900 text-white">12 Clases</option>
+                                            <option value={16} className="bg-zinc-900 text-white">16 Clases</option>
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-primary/70">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="p-4">

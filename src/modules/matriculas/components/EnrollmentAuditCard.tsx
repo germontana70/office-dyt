@@ -618,7 +618,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const [financialEntity, setFinancialEntity] = useState('');
     const [installmentsDetails, setInstallmentsDetails] = useState<any[]>([]);
     const [programPrices, setProgramPrices] = useState<
-        Record<string, { cash: number; increment: number; financed: number; installments?: Record<string, { total?: number }> }>
+        Record<string, { cash: number; increment: number; financed: number; total_classes: number; installments?: Record<string, { total?: number }> }>
     >({});
     const [programOptions, setProgramOptions] = useState<Array<{ key: string; label: string }>>([]);
     const [programLabelMap, setProgramLabelMap] = useState<Record<string, string>>({});
@@ -658,6 +658,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     });
     const [deletedPrograms, setDeletedPrograms] = useState<Set<string>>(new Set());
     const [installmentsConfig, setInstallmentsConfig] = useState<Record<string, { count: number, discount: number, firstPaymentDate: string }>>({});
+    /** Configuración de prorrateo por programa (ingreso tardío). Zero-DDL: persiste en JSONB. */
+    const [prorationConfig, setProrationConfig] = useState<Record<string, { enabled: boolean; classesTaken: number }>>({});
     const pendingInsertsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
@@ -708,6 +710,24 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 });
                 return next;
             });
+
+            // ── Hidratación de Prorrateo (Read Path) ──
+            setProrationConfig(prev => {
+                const next = { ...prev };
+                selectedPrograms.forEach(prog => {
+                    const progDetails = (paymentPlan.installments_details || []).filter((d: any) => d.program_id === prog.id);
+                    const proratedDetail = progDetails.find((d: any) => d.is_prorated === true);
+                    
+                    if (proratedDetail && proratedDetail.classes_taken !== undefined) {
+                        next[prog.id] = {
+                            enabled: true,
+                            classesTaken: Number(proratedDetail.classes_taken)
+                        };
+                    }
+                });
+                return next;
+            });
+
             hydratedPlansRef.current.add(paymentPlan.id);
         }
     }, [paymentPlan, selectedPrograms.length]);
@@ -801,7 +821,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         }, 10000);
 
         startTransition(async () => {
-            const nextPrices: Record<string, { cash: number; increment: number; financed: number; installments?: Record<string, { total?: number }> }> = {};
+            const nextPrices: Record<string, { cash: number; increment: number; financed: number; total_classes: number; installments?: Record<string, { total?: number }> }> = {};
             const nextOptions: Array<{ key: string; label: string }> = [];
             const nextLabelMap: Record<string, string> = {};
             const result = await getProgramPricesBySemester(enrollment.semester);
@@ -827,6 +847,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         cash,
                         increment,
                         financed,
+                        total_classes: Number(row.total_classes ?? 16), // SSOT desde Bóveda, fallback 16
                         installments: row.installments || undefined
                     };
                 }
@@ -924,13 +945,22 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const isMinor = ageIsNumber ? ageValue < 18 : false;
 
 
+    /** Redondeo a la unidad de mil superior (regla institucional) */
+    const round1k = (val: number) => Math.round(val / 1000) * 1000;
+
     const baseCashAmount = (() => {
         if (!selectedPrograms) return Number(paymentPlan?.base_amount || 0);
         return selectedPrograms.reduce((sum: number, program: any) => {
             const selectedKey = programSelection[program.id];
             const key = selectedKey || normalizeProgramKey(program.program_name || '');
-            const price = programPrices[key]?.cash || 0;
-            return sum + price;
+            const pricing = programPrices[key];
+            const cash = pricing?.cash || 0;
+            const pro = prorationConfig[program.id];
+            if (pro?.enabled && pricing) {
+                const totalClasses = pricing.total_classes ?? 16;
+                return sum + round1k((cash / totalClasses) * pro.classesTaken);
+            }
+            return sum + cash;
         }, 0);
     })();
 
@@ -943,17 +973,25 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             const pricing = programPrices[key];
             const cash = pricing?.cash || 0;
             const increment = (pricing?.increment !== undefined && pricing?.increment !== null) ? pricing.increment : 0;
-            
+
             const config = installmentsConfig[program.id] || { count: 1, discount: 0 };
             const discountFactor = 1 - (config.discount / 100);
-            const discountedCash = cash * discountFactor;
             const n = clampInstallments(config.count);
 
+            // ── Bifurcación de Prorrateo ──
+            const pro = prorationConfig[program.id];
+            let effectiveCash = cash;
+            if (pro?.enabled && pricing) {
+                const totalClasses = pricing.total_classes ?? 16;
+                effectiveCash = round1k((cash / totalClasses) * pro.classesTaken);
+            }
+
+            const discountedCash = effectiveCash * discountFactor;
             let price = discountedCash;
             if (n > 1) {
                 price = roundup10k(discountedCash * (1 + (increment / 100)));
             } else {
-                price = Math.ceil(discountedCash / 1000) * 1000;
+                price = round1k(discountedCash);
             }
             return sum + price;
         }, 0);
@@ -979,16 +1017,19 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             const cashPrice = pricing.cash || 0;
             const incrementPercentage = pricing.increment || 0;
 
-            let financedAmount = pricing.financed || 0;
+            // ── Bifurcación de Prorrateo ──
+            const pro = prorationConfig[program.id];
+            let effectiveCash = cashPrice;
+            if (pro?.enabled) {
+                const totalClasses = pricing.total_classes ?? 16;
+                effectiveCash = round1k((cashPrice / totalClasses) * pro.classesTaken);
+            }
 
-            if (financedAmount <= 0) {
-                if (incrementPercentage > 0) {
-                    const calculated = cashPrice * (1 + (incrementPercentage / 100));
-                    const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
-                    financedAmount = roundup10k(calculated);
-                } else {
-                    financedAmount = cashPrice;
-                }
+            let financedAmount: number;
+            if (incrementPercentage > 0) {
+                financedAmount = roundup10k(effectiveCash * (1 + (incrementPercentage / 100)));
+            } else {
+                financedAmount = effectiveCash;
             }
 
             return sum + financedAmount;
@@ -1132,7 +1173,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
         }
     };
 
-    // Motor Matemático Descentralizado por Programa
+    // Motor Matemático Descentralizado por Programa (con bifurcación de Prorrateo)
     useEffect(() => {
         if (!selectedPrograms) return;
 
@@ -1154,7 +1195,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 const year = Number(dateParts[0]) || 2026;
                 const month = Number(dateParts[1]) || 1;
                 const day = Number(dateParts[2]) || 1;
-                
+
                 let baseDate = new Date(year, month - 1, day, 12, 0, 0);
                 if (isNaN(baseDate.getTime())) {
                     baseDate = new Date();
@@ -1162,10 +1203,20 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                 }
                 const discountFactor = 1 - (config.discount / 100);
 
-                const discountedCash = cash * discountFactor;
-                let programAmount = n > 1 
+                // ── Bifurcación de Prorrateo ──
+                const pro = prorationConfig[prog.id];
+                let effectiveCash = cash;
+                let isProrated = false;
+                if (pro?.enabled && pricing) {
+                    const totalClasses = pricing.total_classes ?? 16;
+                    effectiveCash = round1k((cash / totalClasses) * pro.classesTaken);
+                    isProrated = true;
+                }
+
+                const discountedCash = effectiveCash * discountFactor;
+                let programAmount = n > 1
                     ? roundup10k(discountedCash * (1 + (increment / 100)))
-                    : Math.ceil(discountedCash / 1000) * 1000;
+                    : round1k(discountedCash);
 
                 const academicBase = n > 1 ? roundup10k(programAmount / n) : programAmount;
 
@@ -1180,9 +1231,10 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
 
                     let amount_due = existing.amount_due !== undefined ? existing.amount_due : academicPart;
                     let projected_date_val = existing.projected_date || format(projectedDate, 'yyyy-MM-dd');
-                    
+
                     let concept = n === 1 ? 'Contado' : `Cuota ${i+1}/${n}`;
-                    const breakdown: any[] = [{ label: 'Cuota Académica', value: academicPart }];
+                    if (isProrated) concept += ` (Prorrateo ${pro.classesTaken}/${pricing?.total_classes ?? 16} clases)`;
+                    const breakdown: any[] = [{ label: isProrated ? `Cuota Prorrateada (${pro.classesTaken} clases)` : 'Cuota Académica', value: academicPart }];
 
                     if (i === 0 && isFirstProgramOverall) {
                         if (enrollmentFeeValue > 0) {
@@ -1205,8 +1257,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                         payment_date: existing.payment_date || null,
                         reference: existing.reference || '',
                         entity: existing.entity || '',
-                        concept: existing.concept || (i === 0 && isFirstProgramOverall && (enrollmentFeeValue > 0 || uniformFeeValue > 0) 
-                            ? `${concept} + Cargos` 
+                        concept: existing.concept || (i === 0 && isFirstProgramOverall && (enrollmentFeeValue > 0 || uniformFeeValue > 0)
+                            ? `${concept} + Cargos`
                             : concept),
                         evidence_url: existing.evidence_url || null,
                         breakdown: existing.breakdown || breakdown
@@ -1220,7 +1272,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             });
             return newDetails;
         });
-    }, [selectedPrograms, programSelection, programPrices, installmentsConfig, enrollmentFeeValue, uniformFeeValue]);
+    }, [selectedPrograms, programSelection, programPrices, installmentsConfig, prorationConfig, enrollmentFeeValue, uniformFeeValue]);
 
     useEffect(() => {
         if (paymentPlan?.installments_details && paymentPlan.installments_details.length > 0) {
@@ -1277,6 +1329,19 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             } as any);
         });
 
+        // ── Construir payload de prorrateo para auditoría JSONB (Zero-DDL) ──
+        const prorationPayload = selectedPrograms
+            .filter((prog: any) => prorationConfig[prog.id]?.enabled)
+            .map((prog: any) => {
+                const key = programSelection[prog.id] || normalizeProgramKey(prog.program_name || '');
+                const pricing = programPrices[key];
+                return {
+                    program_id: prog.id,
+                    classes_taken: prorationConfig[prog.id].classesTaken,
+                    total_classes: pricing?.total_classes ?? 16
+                };
+            });
+
         const result = await sealPaymentPlan({
             payment_plan_id: paymentPlan.id,
             base_amount: baseCashAmount,
@@ -1292,7 +1357,8 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
             installments_details: installmentsDetails,
             program_instruments: programInstruments,
             program_updates: programUpdates,
-            discount_percentage: selectedPrograms[0] ? installmentsConfig[selectedPrograms[0].id]?.discount : 0 // Trazabilidad de Auditoría
+            discount_percentage: selectedPrograms[0] ? installmentsConfig[selectedPrograms[0].id]?.discount : 0,
+            proration: prorationPayload.length > 0 ? prorationPayload : undefined
         });
 
         if (result?.success) {
@@ -1736,6 +1802,113 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                                     <span>100%</span>
                                                 </div>
                                             </div>
+
+                                            {/* ── PRORRATEO: Activador de Ingreso Tardío ── */}
+                                            {(() => {
+                                                const key = programSelection[prog.id] || normalizeProgramKey(prog.program_name || '');
+                                                const pricing = programPrices[key];
+                                                const totalClassesFromVault = pricing?.total_classes ?? 16;
+                                                const pro = prorationConfig[prog.id] || { enabled: false, classesTaken: totalClassesFromVault };
+                                                const isEnabled = pro.enabled;
+
+                                                // Preview reactivo
+                                                const cash = pricing?.cash || 0;
+                                                const increment = pricing?.increment || 0;
+                                                const n = clampInstallments(installmentsConfig[prog.id]?.count || 1);
+                                                const previewBase = cash > 0 ? round1k((cash / totalClassesFromVault) * pro.classesTaken) : 0;
+                                                const previewFinanced = n > 1 ? roundup10k(previewBase * (1 + (increment / 100))) : previewBase;
+
+                                                return (
+                                                    <div className={`mt-3 rounded-2xl border transition-all duration-300 overflow-hidden ${isEnabled ? 'border-amber-400/40 bg-amber-500/5' : 'border-white/5 bg-black/40'} backdrop-blur-2xl`}>
+                                                        {/* Header del Switch */}
+                                                        <div className="flex items-center justify-between px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <svg className={`w-4 h-4 transition-colors ${isEnabled ? 'text-amber-400' : 'text-white/30'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isEnabled ? 'text-amber-400' : 'text-white/40'}`}>
+                                                                    Prorrateo — Ingreso Tardío
+                                                                </span>
+                                                            </div>
+                                                            {/* Toggle Switch */}
+                                                            <button
+                                                                type="button"
+                                                                role="switch"
+                                                                aria-checked={isEnabled}
+                                                                onClick={() => setProrationConfig(prev => ({
+                                                                    ...prev,
+                                                                    [prog.id]: { enabled: !isEnabled, classesTaken: isEnabled ? totalClassesFromVault : Math.max(1, totalClassesFromVault - 1) }
+                                                                }))}
+                                                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${isEnabled ? 'bg-amber-500' : 'bg-white/10'}`}
+                                                            >
+                                                                <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-lg transition-transform duration-300 ${isEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Panel desplegable condicional */}
+                                                        {isEnabled && (
+                                                            <div className="px-4 pb-4 space-y-3 border-t border-amber-400/10">
+                                                                <p className="text-[9px] text-amber-300/60 font-mono uppercase tracking-wider pt-2">
+                                                                    Bóveda: {totalClassesFromVault} clases totales en este programa
+                                                                </p>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[10px] font-black uppercase text-amber-400/70 tracking-widest">
+                                                                        Clases a Tomar
+                                                                    </label>
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            type="number"
+                                                                            min={1}
+                                                                            max={totalClassesFromVault}
+                                                                            value={pro.classesTaken}
+                                                                            onChange={(e) => {
+                                                                                const raw = Number(e.target.value);
+                                                                                const clamped = Math.max(1, Math.min(totalClassesFromVault, raw));
+                                                                                setProrationConfig(prev => ({
+                                                                                    ...prev,
+                                                                                    [prog.id]: { enabled: true, classesTaken: clamped }
+                                                                                }));
+                                                                            }}
+                                                                            className="w-full bg-white/5 border border-amber-400/20 focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-3 text-white font-mono text-lg tracking-tight focus:outline-none transition-all backdrop-blur-md"
+                                                                        />
+                                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-400/50 text-sm font-black">
+                                                                            / {totalClassesFromVault}
+                                                                        </span>
+                                                                    </div>
+                                                                    {pro.classesTaken >= totalClassesFromVault && (
+                                                                        <p className="text-[9px] text-amber-400/60 font-mono">
+                                                                            ⚠ Máximo alcanzado — usa el precio completo de Contado.
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Preview Reactivo */}
+                                                                {cash > 0 && (
+                                                                    <div className="rounded-xl bg-black/60 border border-amber-400/10 p-3 space-y-1.5 backdrop-blur-xl">
+                                                                        <p className="text-[9px] font-black uppercase tracking-widest text-amber-400/50">Vista Previa Prorrateada</p>
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="text-[10px] text-white/50 font-mono">Base ({n === 1 ? 'Contado' : 'para Cuotas'})</span>
+                                                                            <span className="text-sm font-black text-white font-mono">{formatCurrency(previewBase)}</span>
+                                                                        </div>
+                                                                        {n > 1 && increment > 0 && (
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-[10px] text-amber-400/60 font-mono">Total Financiado (+{increment}%)</span>
+                                                                                <span className="text-sm font-black text-amber-400 font-mono">{formatCurrency(previewFinanced)}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="flex items-center justify-between border-t border-white/5 pt-1.5">
+                                                                            <span className="text-[10px] text-white/40 font-mono uppercase tracking-widest">Ahorro vs Precio Completo</span>
+                                                                            <span className="text-xs font-black text-emerald-400 font-mono">
+                                                                                -{formatCurrency(cash - previewBase)}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
 
                                     </div>

@@ -9,7 +9,7 @@ export class PricingRepository {
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from('program_prices')
+            .from('dyt_program_prices')
             .select('*')
             .eq('semester', semester)
             .order('program_name', { ascending: true });

@@ -22,6 +22,7 @@ type ProgramPriceRow = {
     cash_price?: number | null;
     valor_contado?: number | null;
     increment_percentage?: number | null;
+    total_classes?: number | null;
 };
 
 const normalizeStr = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
@@ -109,12 +110,13 @@ export async function initializePaymentPlan(enrollmentId: string) {
 
             const roundup10k = (val: number) => Math.ceil(val / 10000) * 10000;
 
-            // Mapa: nombre normalizado → { contado, incremento }
+            // Mapa: nombre normalizado → { contado, incremento, total_classes }
             const priceMap = new Map(
                 priceRows.map((row) => {
                     const cashValue = Number(row.valor_contado ?? row.cash_price ?? 0);
                     const incrementValue = Number(row.increment_percentage ?? 0);
-                    return [normalizeStr(String(row.program_name || '')), { cash: cashValue, increment: incrementValue }];
+                    const totalClassesValue = Number(row.total_classes ?? 16);
+                    return [normalizeStr(String(row.program_name || '')), { cash: cashValue, increment: incrementValue, total_classes: totalClassesValue }];
                 })
             );
 
@@ -239,6 +241,8 @@ export async function sealPaymentPlan(input: {
     program_instruments?: Array<{ program_id: string; instrument_id: string | null }>;
     program_updates?: Array<{ program_id: string; program_name: string; group_class_id?: string | null; teacher_id?: string | null; schedules?: any[]; observations?: string; isNew?: boolean; isDeleted?: boolean }>;
     discount_percentage?: number;
+    /** Datos de prorrateo por programa (ingreso tardío). Zero-DDL: se serializa en installments_details JSONB. */
+    proration?: Array<{ program_id: string; classes_taken: number; total_classes: number }>;
 }) {
     try {
         const supabase = await createClient();
@@ -287,7 +291,22 @@ export async function sealPaymentPlan(input: {
             status = 'paid';
         }
 
-        const installmentsArray = input.installments_details || [];
+        // ── PRORRATEO: Serializar metadatos de ingreso tardío en el JSONB (Zero-DDL) ──
+        const prorationMap = new Map(
+            (input.proration || []).map(p => [p.program_id, p])
+        );
+        const installmentsArray = (input.installments_details || []).map(detail => {
+            const proData = prorationMap.get(detail.program_id);
+            if (!proData) return detail;
+            // Enriquecer cada cuota con metadatos de auditoría de prorrateo
+            return {
+                ...detail,
+                classes_taken: proData.classes_taken,
+                total_classes: proData.total_classes,
+                is_prorated: true
+            };
+        });
+
         const { data: updatedPlan, error: updateError } = await supabase
             .from('dyt_payment_plans')
             .update({
