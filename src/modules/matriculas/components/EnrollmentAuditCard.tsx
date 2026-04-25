@@ -453,25 +453,34 @@ const requiresInstrumentConfig = (name: string) => {
  * el bug heredado de producción donde el cliente guardaba rutas relativas.
  */
 const resolvePhotoUrl = (url: string | null | undefined, semester?: string): string | undefined => {
+    console.log(`🔍 [resolvePhotoUrl] Invocado con url: "${url}", semester: "${semester}"`);
     if (!url) return undefined;
     
-    // Si ya es absoluta, verificar si le falta el semestre
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-        if (semester && url.includes('/student-photos/') && !url.includes(`/student-photos/${semester}/`)) {
-            const finalUrl = url.replace('/student-photos/', `/student-photos/${semester}/`);
-            console.log(`📸 URL Generada (Absoluta Corregida) para ${url.substring(url.lastIndexOf('/') + 1)}:`, finalUrl);
-            return finalUrl;
-        }
-        return url;
-    }
-
-    // Es una ruta relativa (ej: profile_763d0d8c...jpg) — la resolvemos contra la URL base activa
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
-    const finalPath = (semester && !url.includes(`${semester}/`)) ? `${semester}/${url}` : url;
-    
+
+    let finalPath = url;
+
+    // Si la URL es absoluta, extraemos solo la ruta relativa al bucket
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        const match = url.match(/\/storage\/v1\/object\/public\/student-photos\/(.+)$/);
+        if (match) {
+            finalPath = match[1];
+        } else {
+            console.log(`🔍 URL FINAL RENDERIZADA (Intacta):`, url);
+            return url;
+        }
+    }
+
+    // Asegurar que el semestre esté en la ruta
+    if (semester && !finalPath.includes(`${semester}/`)) {
+        finalPath = `${semester}/${finalPath}`;
+    }
+
+    // Crear la URL final usando la base limpia
     const finalUrl = `${cleanBase}/storage/v1/object/public/student-photos/${finalPath}`;
-    console.log(`📸 URL Generada (Relativa Resuelta):`, finalUrl);
+    
+    console.log(`🔍 URL FINAL RENDERIZADA:`, finalUrl);
     return finalUrl;
 };
 
@@ -1437,6 +1446,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                             alt={enrollment.student.first_name}
                                             width={128}
                                             height={128}
+                                            unoptimized={true}
                                             className={`w-full h-full object-cover transition-transform duration-700 ${isUploading ? 'scale-110 blur-sm' : 'group-hover/photo:scale-110'}`}
                                         />
                                     ) : (
