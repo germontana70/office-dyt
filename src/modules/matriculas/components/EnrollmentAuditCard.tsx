@@ -454,11 +454,25 @@ const requiresInstrumentConfig = (name: string) => {
  */
 const resolvePhotoUrl = (url: string | null | undefined, semester?: string): string | undefined => {
     if (!url) return undefined;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    
+    // Si ya es absoluta, verificar si le falta el semestre
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        if (semester && url.includes('/student-photos/') && !url.includes(`/student-photos/${semester}/`)) {
+            const finalUrl = url.replace('/student-photos/', `/student-photos/${semester}/`);
+            console.log(`📸 URL Generada (Absoluta Corregida) para ${url.substring(url.lastIndexOf('/') + 1)}:`, finalUrl);
+            return finalUrl;
+        }
+        return url;
+    }
+
     // Es una ruta relativa (ej: profile_763d0d8c...jpg) — la resolvemos contra la URL base activa
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const semesterPath = semester ? `${semester}/` : '';
-    return `${base}/storage/v1/object/public/student-photos/${semesterPath}${url}`;
+    const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    const finalPath = (semester && !url.includes(`${semester}/`)) ? `${semester}/${url}` : url;
+    
+    const finalUrl = `${cleanBase}/storage/v1/object/public/student-photos/${finalPath}`;
+    console.log(`📸 URL Generada (Relativa Resuelta):`, finalUrl);
+    return finalUrl;
 };
 
 export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
