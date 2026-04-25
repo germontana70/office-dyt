@@ -452,12 +452,13 @@ const requiresInstrumentConfig = (name: string) => {
  * usando la variable NEXT_PUBLIC_SUPABASE_URL activa, corrigiendo
  * el bug heredado de producción donde el cliente guardaba rutas relativas.
  */
-const resolvePhotoUrl = (url: string | null | undefined): string | undefined => {
+const resolvePhotoUrl = (url: string | null | undefined, semester?: string): string | undefined => {
     if (!url) return undefined;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     // Es una ruta relativa (ej: profile_763d0d8c...jpg) — la resolvemos contra la URL base activa
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    return `${base}/storage/v1/object/public/student-photos/${url}`;
+    const semesterPath = semester ? `${semester}/` : '';
+    return `${base}/storage/v1/object/public/student-photos/${semesterPath}${url}`;
 };
 
 export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
@@ -468,7 +469,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, startUploadTransition] = useTransition();
     const [isDragging, setIsDragging] = useState(false);
-    const [currentPhotoUrl, setCurrentPhotoUrl] = useState(resolvePhotoUrl(enrollment.student?.photo_url));
+    const [currentPhotoUrl, setCurrentPhotoUrl] = useState(resolvePhotoUrl(enrollment.student?.photo_url, enrollment.semester));
 
     const handleUpdateProgramSchedule = (progId: string, scheduleIndex: number, field: string, value: string) => {
         setSelectedPrograms(prev => prev.map(prog => {
@@ -515,7 +516,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     };
 
     useEffect(() => {
-        setCurrentPhotoUrl(resolvePhotoUrl(enrollment.student?.photo_url));
+        setCurrentPhotoUrl(resolvePhotoUrl(enrollment.student?.photo_url, enrollment.semester));
     }, [enrollment.student?.photo_url]);
 
     const handlePhotoClick = () => {
