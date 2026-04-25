@@ -27,6 +27,16 @@ type ProgramPriceRow = {
 
 const normalizeStr = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 
+/**
+ * Sanitiza el nombre de un programa eliminando sufijos numéricos de grupo.
+ * Ej: "DANZAS 01" → "DANZAS", "PIANO INICIACIÓN 04" → "PIANO INICIACIÓN"
+ * Esto resuelve el vacío arquitectónico donde los grupos no tienen match
+ * directo en dyt_program_prices.
+ */
+const getSanitizedProgramName = (name: string): string => {
+    return String(name || '').trim().replace(/\s+\d+$/, '').trim();
+};
+
 export async function initializePaymentPlan(enrollmentId: string) {
     try {
         if (!enrollmentId) {
@@ -121,12 +131,14 @@ export async function initializePaymentPlan(enrollmentId: string) {
             );
 
             baseAmount = programNames.reduce((sum, name) => {
+                // Primero intentar con el nombre exacto, luego con el nombre sanitizado (sin sufijo numérico)
                 const key = normalizeStr(name);
-                const pricing = priceMap.get(key);
+                const sanitizedKey = normalizeStr(getSanitizedProgramName(name));
+                const pricing = priceMap.get(key) ?? priceMap.get(sanitizedKey);
                 
                 if (pricing === undefined || pricing === null) {
                     needsAudit = true;
-                    console.warn(`[FINANCE INIT] Precio no encontrado para: ${name}. Usando $0 temporal.`);
+                    console.warn(`[FINANCE INIT] Precio no encontrado para: "${name}" (sanitizado: "${getSanitizedProgramName(name)}"). Usando $0 temporal.`);
                     return sum + 0;
                 }
 
