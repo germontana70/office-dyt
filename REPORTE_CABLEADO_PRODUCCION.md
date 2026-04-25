@@ -44,6 +44,7 @@ Tras cruzar los constraints y el `information_schema` de ambos ecosistemas:
 | **Foreign Keys `dyt_enrollment_programs`** | `enrollment_id`, `group_class_id`, `instrument_id` | Idéntico | 🟢 Sincronizado |
 | **Bóveda de Precios (`dyt_program_prices`)** | Sin llave foránea hacia programas master | Idéntico | 🟡 Mismo vacío arquitectónico |
 | **Storage Bucket** | `student-photos` (Público) | Creado manualmente en Fase 3 | 🟢 Resuelto |
+| **Sincronización de Encoding** | Errores heredados de exportación CSV/SQL (`├í`, `├▒`) | Saneamiento SQL ejecutado en `teachers` y `dyt_group_classes` | 🟢 Exitosa (Fase 2) |
 
 ### Conclusión y Plan de Acción
 El entorno local (192.168.0.20) es ahora mismo **un clon perfecto a nivel de esquema SQL** de Producción. Las fallas financieras y de fotos que detectamos en el sistema local no eran un problema de mala migración, sino **bugs de lógica de negocio que ya existen en producción** (Deuda Técnica heredada).
