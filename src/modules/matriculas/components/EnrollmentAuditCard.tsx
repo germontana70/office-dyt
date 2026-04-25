@@ -446,6 +446,20 @@ const requiresInstrumentConfig = (name: string) => {
     return lower.includes('semestre personalizado') || lower.includes('curso libre - instrumento');
 };
 
+/**
+ * Resuelve una URL de foto de estudiante a su forma absoluta.
+ * Si la URL es relativa (empieza por 'profile_'), la construye
+ * usando la variable NEXT_PUBLIC_SUPABASE_URL activa, corrigiendo
+ * el bug heredado de producción donde el cliente guardaba rutas relativas.
+ */
+const resolvePhotoUrl = (url: string | null | undefined): string | undefined => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Es una ruta relativa (ej: profile_763d0d8c...jpg) — la resolvemos contra la URL base activa
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    return `${base}/storage/v1/object/public/student-photos/${url}`;
+};
+
 export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     if (!enrollment) return null;
 
@@ -454,7 +468,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, startUploadTransition] = useTransition();
     const [isDragging, setIsDragging] = useState(false);
-    const [currentPhotoUrl, setCurrentPhotoUrl] = useState(enrollment.student?.photo_url);
+    const [currentPhotoUrl, setCurrentPhotoUrl] = useState(resolvePhotoUrl(enrollment.student?.photo_url));
 
     const handleUpdateProgramSchedule = (progId: string, scheduleIndex: number, field: string, value: string) => {
         setSelectedPrograms(prev => prev.map(prog => {
@@ -501,7 +515,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
     };
 
     useEffect(() => {
-        setCurrentPhotoUrl(enrollment.student?.photo_url);
+        setCurrentPhotoUrl(resolvePhotoUrl(enrollment.student?.photo_url));
     }, [enrollment.student?.photo_url]);
 
     const handlePhotoClick = () => {
