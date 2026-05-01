@@ -6,7 +6,10 @@ const { google } = require('googleapis');
 const CREDENTIALS_PATH = path.join(__dirname, 'google-credentials', 'credentials.json');
 const TOKEN_PATH = path.join(__dirname, 'google-credentials', 'token.json');
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+const SCOPES = [
+    'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/calendar.events'
+];
 
 function authorize() {
     console.log('--- GENERADOR DE TOKENS OAUTH2 [ADMIN DELEGATION] ---');
