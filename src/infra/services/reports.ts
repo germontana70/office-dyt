@@ -93,31 +93,7 @@ export const reportService = {
                 `$ ${subtotal.toLocaleString()}`
             ]);
 
-            if (isCancelled && s.notes) {
-                let displayNotes = s.notes || '';
-                
-                // 1. Ocultar marcas de agua técnicas
-                displayNotes = displayNotes.replace(/\[(?:STUDENT_HINT|GRUPO|ALERTA)[\s\S]*?\]/gi, '').trim();
 
-                // 2. Extraer SOLO el motivo real si existe (corta en el primer salto de línea o emoji)
-                const motiveMatch = /(?:Motivo|Cancelada)[\s:-]*([^\n]+)/i.exec(displayNotes);
-                if (motiveMatch && motiveMatch[1]) {
-                    // Limpia basura residual del match aislando hasta el primer emoji o pipe
-                    displayNotes = `Motivo: ${motiveMatch[1].split(/(?:📅|🎵|\||¡)/)[0].trim()}`;
-                } else {
-                    // Si no hay motivo claro, corta la plantilla gigante de GCal
-                    displayNotes = displayNotes.split(/(?:Unirse|¡Hola|CLASE DE MÚSICA|En la Escuela)/i)[0].trim();
-                    if (displayNotes.length > 100) displayNotes = displayNotes.substring(0, 100) + '...';
-                    displayNotes = `Motivo: ${displayNotes}`;
-                }
-
-                // 3. Destruir Emojis y caracteres no-ASCII que rompen jsPDF
-                displayNotes = displayNotes.replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
-
-                tableData.push([
-                    { content: displayNotes, colSpan: 7, styles: { fontStyle: 'italic', textColor: [200, 50, 50] } }
-                ]);
-            }
         });
 
         autoTable(doc, {
