@@ -60,22 +60,24 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
         const teachers = teachersRes.data || [];
         const students = studentsRes.data || [];
 
-        // 3. To do a safe Upsert without requiring a UNIQUE constraint on google_event_id,
-        // we fetch existing events in this period to get their Supabase IDs.
-        const googleEventIds = rawEvents.map(e => e.id);
-        // Chunking might be needed if too many, but for 1 month ~ 1000 events, IN query is fine
-        const existingEventsRes = await supabase
+        // 3. HARD SYNC: Borrar todos los eventos del rango temporal antes de reinsertar.
+        // Esto garantiza que Supabase siempre refleje la realidad actual de Google Calendar
+        // sin ningún dato obsoleto o corrupto de sincronizaciones anteriores.
+        console.log(`[SYNC ENGINE] 🗑️ Borrando eventos existentes del rango: ${timeMin} → ${timeMax}`);
+        const { error: deleteRangeError, count: deletedRangeCount } = await supabase
             .from('calendar_events')
-            .select('id, google_event_id')
-            .in('google_event_id', googleEventIds);
+            .delete({ count: 'exact' })
+            .gte('event_date', timeMin)
+            .lte('event_date', timeMax);
 
-        const existingEventsMap = new Map();
-        (existingEventsRes.data || []).forEach((row: any) => {
-            existingEventsMap.set(row.google_event_id, row.id);
-        });
+        if (deleteRangeError) {
+            console.error('[SYNC ENGINE] Error al limpiar el rango:', deleteRangeError);
+            throw new Error(`Error limpiando rango en Supabase: ${deleteRangeError.message}`);
+        }
+        console.log(`[SYNC ENGINE] ✅ ${deletedRangeCount ?? 0} eventos anteriores eliminados del rango.`);
 
         // 4. Parse and Match
-        const batchUpserts: any[] = [];
+        const batchInserts: any[] = [];
         const warningsList: { eventTitle: string; date: string; calendarName: string; studentHint: string }[] = [];
 
         for (const raw of rawEvents) {
@@ -184,9 +186,8 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
 
             payload.notes = finalNotes;
 
-            // Conservar Google Event ID original para el Upsert
-            const existingId = existingEventsMap.get(raw.id);
-            payload.id = existingId ? existingId : crypto.randomUUID();
+            // Siempre generar un UUID nuevo (Hard Sync: tabla limpiada antes de insertar)
+            payload.id = crypto.randomUUID();
 
             // --- INICIO DIAGNÓSTICO CLASES CANCELADAS ---
             const isCancelledCal = raw.calendarName && raw.calendarName.toLowerCase().includes('canceladas');
@@ -201,63 +202,30 @@ export async function syncCalendarEventsAction(startDateStr: string, endDateStr:
             }
             // --- FIN DIAGNÓSTICO CLASES CANCELADAS ---
 
-            batchUpserts.push(payload);
+            batchInserts.push(payload);
         }
 
-        // 5. Execute Upsert Batch
-        // Upserting large arrays can be heavy, but Supabase handles up to a few thousands easily.
+        // 5. INSERT fresco en Supabase (la tabla ya fue limpiada en el Paso 3)
+        console.log(`[SYNC ENGINE] 📥 Insertando ${batchInserts.length} eventos frescos de Google Calendar...`);
         const CHUNK_SIZE = 500;
-        for (let i = 0; i < batchUpserts.length; i += CHUNK_SIZE) {
-            const chunk = batchUpserts.slice(i, i + CHUNK_SIZE);
-            const { error } = await supabase.from('calendar_events').upsert(chunk, { onConflict: 'google_event_id' });
+        for (let i = 0; i < batchInserts.length; i += CHUNK_SIZE) {
+            const chunk = batchInserts.slice(i, i + CHUNK_SIZE);
+            const { error } = await supabase.from('calendar_events').insert(chunk);
             if (error) {
-                console.error('Error insertando chunk en Supabase:', error);
+                console.error('[SYNC ENGINE] Error insertando chunk:', error);
                 throw new Error(`Error BD en Supabase: ${error.message}`);
             }
         }
 
-        // 6. Purga de Eventos Huérfanos (Fantasmas eliminados de GCal)
-        const validGoogleIds = batchUpserts.map(p => p.google_event_id);
-        let deletedCount = 0;
-
-        if (validGoogleIds.length > 0) {
-            // Utilizamos el not() con in() acotado por el rango temporal estricto de sync
-            const { data: deletedData, error: deleteError } = await supabase
-                .from('calendar_events')
-                .delete()
-                .gte('event_date', timeMin)
-                .lte('event_date', timeMax)
-                .not('google_event_id', 'in', `(${validGoogleIds.join(',')})`)
-                .select('id');
-
-            if (deleteError) {
-                console.error('[SYNC ENGINE] Error purgando fantasmas:', deleteError);
-            } else {
-                deletedCount = deletedData?.length || 0;
-            }
-        } else {
-            // Protección: Si en este periodo real ya no viene nada, se barre todo el mes asumiendo borrado masivo.
-            const { data: deletedData } = await supabase
-                .from('calendar_events')
-                .delete()
-                .gte('event_date', timeMin)
-                .lte('event_date', timeMax)
-                .select('id');
-                
-            deletedCount = deletedData?.length || 0;
-        }
-
-        if (deletedCount > 0) {
-            console.log(`[SYNC ENGINE] 👻 Limpieza de Huérfanos: ${deletedCount} evento(s) fantasma destruido(s).`);
-        }
+        console.log(`[SYNC ENGINE] ✅ Hard Sync completado: ${batchInserts.length} eventos escritos.`);
 
         const warningsCount = warningsList.length;
         return {
             success: true,
-            count: batchUpserts.length,
+            count: batchInserts.length,
             warnings: warningsCount,
             warningsList,
-            message: `Sincronizados ${batchUpserts.length} eventos. ${warningsCount > 0 ? `⚠️ ${warningsCount} advertencias de alumnos huérfanos.` : '✅ Todos los alumnos cruzados con éxito.'}`
+            message: `Sincronizados ${batchInserts.length} eventos desde Google Calendar. ${warningsCount > 0 ? `⚠️ ${warningsCount} advertencias de alumnos huérfanos.` : '✅ Todos los alumnos cruzados con éxito.'}`
         };
 
     } catch (err: any) {
