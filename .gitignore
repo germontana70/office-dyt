@@ -38,3 +38,9 @@ google-credentials/
 .env.production
 .env.local
 credenciales/
+
+# Supabase CLI internals
+supabase/.temp/
+
+# Scripts de utilidad local (pueden contener credenciales sensibles)
+scratch/
