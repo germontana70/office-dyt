@@ -47,9 +47,10 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                 } else {
                     setSyncMessage({ type: 'success', text: res.message });
                 }
-                // Navegar a la URL con las fechas sincronizadas para que el
-                // servidor recargue los datos del periodo correcto
+                // Navegar a la URL con las fechas sincronizadas.
+                // Si la URL ya tiene esas fechas, push() no recarga → usamos push + refresh.
                 router.push(`/dashboard/payments?start=${localStart}&end=${localEnd}`);
+                router.refresh(); // Fuerza al Server Component a re-ejecutarse y leer Supabase fresco
             } else {
                 setSyncMessage({ type: 'error', text: res.message });
             }
@@ -68,7 +69,10 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
     };
 
     const handleFilterChange = () => {
+        // push() a la misma URL no recarga el Server Component en Next.js.
+        // Usamos push() para actualizar params + refresh() para forzar re-render del servidor.
         router.push(`/dashboard/payments?start=${localStart}&end=${localEnd}`);
+        router.refresh();
     };
 
     const requestSort = (key: 'teacherName' | 'totalPayment') => {
@@ -559,21 +563,6 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                                 // Resolución discriminada: 1a1 → nombre alumno | Grupal → nombre programa
                                 const studentName = resolveStudentLabel(s);
 
-                                let displayNotes = s.notes || '';
-                                if (displayNotes) {
-                                    // 1. Ocultar marcas de agua técnicas
-                                    displayNotes = displayNotes.replace(/\[(?:STUDENT_HINT|GRUPO|ALERTA)[\s\S]*?\]/gi, '').trim();
-
-                                    // 2. Extraer SOLO el motivo real si existe (corta en el primer salto de línea o emoji)
-                                    const motiveMatch = /(?:Motivo|Cancelada)[\s:-]*([^\n]+)/i.exec(displayNotes);
-                                    if (motiveMatch && motiveMatch[1]) {
-                                        // Limpia basura residual del match aislando hasta el primer emoji o pipe
-                                        displayNotes = motiveMatch[1].split(/(?:📅|🎵|\||¡)/)[0].trim();
-                                    } else {
-                                        // Si no hay motivo claro, corta la plantilla gigante de GCal
-                                        displayNotes = displayNotes.split(/(?:Unirse|¡Hola|CLASE DE MÚSICA|En la Escuela)/i)[0].trim();
-                                    }
-                                }
 
                                 return (
                                     <div key={i} className={`glass p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col hover:bg-white/10 transition-colors ${isCancelled ? 'opacity-60 grayscale' : ''}`}>
@@ -609,11 +598,6 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
                                                 </div>
                                             )}
                                         </div>
-                                        {isCancelled && displayNotes && (
-                                            <div className="mt-3 text-xs bg-black/40 border border-white/5 p-2 rounded text-zinc-400 italic font-mono whitespace-pre-wrap">
-                                                Motivo: {displayNotes.substring(0, 150)}{displayNotes.length > 150 ? '...' : ''}
-                                            </div>
-                                        )}
                                     </div>
                                 );
                             })}
