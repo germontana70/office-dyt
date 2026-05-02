@@ -79,3 +79,24 @@ export async function batchUpdateEventDescriptions(
 
     return { success, errors };
 }
+
+export async function batchUpdateEventTitles(
+    calendarId: string,
+    updates: { eventId: string; newTitle: string }[]
+): Promise<{ success: number; errors: string[] }> {
+    let success = 0;
+    const errors: string[] = [];
+
+    for (const update of updates) {
+        if (!update.newTitle || update.newTitle.trim() === '') continue; // Skip empty titles
+
+        try {
+            await EventsEditorService.updateEventTitle(calendarId, update.eventId, update.newTitle);
+            success++;
+        } catch (error: any) {
+            errors.push(`Error en evento ${update.eventId}: ${error.message}`);
+        }
+    }
+
+    return { success, errors };
+}

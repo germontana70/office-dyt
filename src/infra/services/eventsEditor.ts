@@ -70,4 +70,23 @@ export class EventsEditorService {
             throw new Error(`Error actualizando evento: ${error.message}`);
         }
     }
+    static async updateEventTitle(calendarId: string, eventId: string, newTitle: string): Promise<void> {
+        const auth = await GoogleCalendarService.getAuthClient();
+        const calendarAPI = google.calendar({ version: 'v3', auth });
+
+        try {
+            await calendarAPI.events.patch({
+                calendarId,
+                eventId,
+                sendUpdates: 'none', // Critical: no notifications
+                requestBody: {
+                    summary: newTitle
+                }
+            });
+            console.log(`[EVENTS EDITOR] Título del evento ${eventId} actualizado exitosamente.`);
+        } catch (error: any) {
+            console.error(`[EVENTS EDITOR] Error actualizando título del evento ${eventId}:`, error.message);
+            throw new Error(`Error actualizando título del evento: ${error.message}`);
+        }
+    }
 }
