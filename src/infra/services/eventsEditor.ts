@@ -89,4 +89,46 @@ export class EventsEditorService {
             throw new Error(`Error actualizando título del evento: ${error.message}`);
         }
     }
+
+    static async getEvent(calendarId: string, eventId: string): Promise<any> {
+        const auth = await GoogleCalendarService.getAuthClient();
+        const calendarAPI = google.calendar({ version: 'v3', auth });
+        
+        try {
+            const res = await calendarAPI.events.get({ calendarId, eventId });
+            return res.data;
+        } catch (error: any) {
+            throw new Error(`Error obteniendo el evento: ${error.message}`);
+        }
+    }
+
+    static async insertEvent(calendarId: string, eventBody: any): Promise<any> {
+        const auth = await GoogleCalendarService.getAuthClient();
+        const calendarAPI = google.calendar({ version: 'v3', auth });
+
+        try {
+            const res = await calendarAPI.events.insert({
+                calendarId,
+                requestBody: eventBody
+            });
+            return res.data;
+        } catch (error: any) {
+            throw new Error(`Error creando el evento copiado: ${error.message}`);
+        }
+    }
+
+    static async deleteEvent(calendarId: string, eventId: string): Promise<void> {
+        const auth = await GoogleCalendarService.getAuthClient();
+        const calendarAPI = google.calendar({ version: 'v3', auth });
+
+        try {
+            await calendarAPI.events.delete({
+                calendarId,
+                eventId,
+                sendUpdates: 'none'
+            });
+        } catch (error: any) {
+            throw new Error(`Error eliminando el evento original: ${error.message}`);
+        }
+    }
 }

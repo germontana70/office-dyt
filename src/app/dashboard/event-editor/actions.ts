@@ -100,3 +100,130 @@ export async function batchUpdateEventTitles(
 
     return { success, errors };
 }
+
+export async function cancelClassEvent(
+    originalCalendarId: string,
+    cancelledEventId: string,
+    selectedEventIdsToInject: string[],
+    cancelReason: string,
+    classHeightStr: string
+): Promise<{ success: boolean; message: string }> {
+    try {
+        const { CALENDAR_IDS } = await import('@/core/constants/calendars');
+        const cancelledCalendarId = CALENDAR_IDS["CLASES CANCELADAS"];
+        if (!cancelledCalendarId) {
+            throw new Error("No se encontró el calendario de Clases Canceladas en las constantes.");
+        }
+
+        // 1. Fetch the event to cancel
+        const cancelledEvent = await EventsEditorService.getEvent(originalCalendarId, cancelledEventId);
+        
+        // 2. Prepare the cancellation note
+        const note = `******CANCELADA - ${classHeightStr.toUpperCase()}******\nMotivo: ${cancelReason}\nReposición - ${classHeightStr} - pendiente de programar\n------------------------------------`;
+
+        // 3. Inject note to other selected events (excluding the one being deleted if it's there)
+        const eventsToInject = selectedEventIdsToInject.filter(id => id !== cancelledEventId);
+        if (eventsToInject.length > 0) {
+            await batchUpdateEventDescriptions(
+                originalCalendarId,
+                eventsToInject,
+                note,
+                'END'
+            );
+        }
+
+        // 4. Create copy in Clases Canceladas
+        const newSummary = `Cancelada - ${classHeightStr} - ${cancelledEvent.summary || ''}`;
+        const newDescription = cancelledEvent.description ? `${cancelledEvent.description}\n\n${note}` : note;
+        
+        const copyBody = {
+            summary: newSummary,
+            description: newDescription,
+            start: cancelledEvent.start,
+            end: cancelledEvent.end,
+            location: cancelledEvent.location,
+            // Exclude attendees to avoid notifying them or carrying over RSVPs, and exclude IDs
+        };
+
+        await EventsEditorService.insertEvent(cancelledCalendarId, copyBody);
+
+        // 5. Delete the original event
+        await EventsEditorService.deleteEvent(originalCalendarId, cancelledEventId);
+
+        return { success: true, message: 'Clase cancelada exitosamente.' };
+    } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}
+
+export async function createReposicionEvent(
+    originalCalendarId: string,
+    baseEventId: string,
+    selectedEventIdsToInject: string[],
+    targetCalendarId: string,
+    date: string,
+    startTime: string,
+    endTime: string,
+    classHeightStr: string
+): Promise<{ success: boolean; message: string }> {
+    try {
+        const { EventsEditorService } = await import('@/infra/services/eventsEditor');
+        const baseEvent = await EventsEditorService.getEvent(originalCalendarId, baseEventId);
+
+        const newSummary = `Reposición - ${classHeightStr} - ${baseEvent.summary || ''}`;
+        
+        const startDateTime = `${date}T${startTime}:00-05:00`;
+        const endDateTime = `${date}T${endTime}:00-05:00`;
+
+        // 1. Format the date for the injection note
+        const dateObj = new Date(startDateTime);
+        const dateFormatted = dateObj.toLocaleString('es-CO', { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        const capitalizedDate = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+
+        const note = `Reposición - ${classHeightStr} - ${capitalizedDate}`;
+
+        // 2. Prepare description for the new Reposición event
+        const matchString = `Reposición - ${classHeightStr} - pendiente de programar`;
+        let newDescription = baseEvent.description || '';
+        
+        const parts = newDescription.split(matchString);
+        if (parts.length > 1) {
+            newDescription = parts[0] + matchString + `\n${note}\n` + parts.slice(1).join(matchString);
+        } else {
+            newDescription = newDescription ? `${newDescription}\n\n${note}` : note;
+        }
+
+        const copyBody = {
+            summary: newSummary,
+            description: newDescription,
+            start: { dateTime: startDateTime, timeZone: 'America/Bogota' },
+            end: { dateTime: endDateTime, timeZone: 'America/Bogota' },
+            location: baseEvent.location,
+        };
+
+        // 3. Create event
+        await EventsEditorService.insertEvent(targetCalendarId, copyBody);
+
+        // 4. Inject note to other selected events
+        if (selectedEventIdsToInject.length > 0) {
+            await batchUpdateEventDescriptions(
+                originalCalendarId,
+                selectedEventIdsToInject,
+                note,
+                'AFTER_MATCH',
+                matchString
+            );
+        }
+
+        return { success: true, message: 'Reposición creada y registrada con éxito.' };
+    } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}

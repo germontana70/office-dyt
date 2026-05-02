@@ -13,5 +13,6 @@ export const CALENDAR_IDS: Record<string, string> = {
     "SALÓN 208": "c_8u05iusbid5gilsrcn55fjepbs@group.calendar.google.com",
     "SALÓN 209": "c_apk6uglssrktievhpk1ealho9k@group.calendar.google.com",
     "GIMNASIO": "1a478eeef17d68d804a8ae61aad748113138918b020d0c86298f4bc0f9ce1ebc@group.calendar.google.com",
-    "CLASES VIRTUALES - SALA 1": "donesytalentos.org_cik30npi37ti2gio9cg1ill990@group.calendar.google.com"
+    "CLASES VIRTUALES - SALA 1": "donesytalentos.org_cik30npi37ti2gio9cg1ill990@group.calendar.google.com",
+    "CLASES CANCELADAS": "donesytalentos.org_jd0o13o7vccgsb5e3fsetjeabk@group.calendar.google.com"
 };
