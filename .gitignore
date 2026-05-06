@@ -44,3 +44,5 @@ supabase/.temp/
 
 # Scripts de utilidad local (pueden contener credenciales sensibles)
 scratch/
+# SQL Backups
+*.sql
