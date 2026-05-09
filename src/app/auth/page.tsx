@@ -46,9 +46,11 @@ export default function AuthPage() {
                 const { error: signInError } = await authService.signIn(email, password);
 
                 if (signInError) {
-                    setError(signInError.message === 'Invalid login credentials'
+                    console.error("SIGN IN ERROR:", signInError);
+                    const errorMessage = signInError.message || signInError.toString();
+                    setError(errorMessage === 'Invalid login credentials'
                         ? 'Credenciales de acceso incorrectas'
-                        : signInError.message);
+                        : errorMessage);
                 } else {
                     router.push('/dashboard');
                     router.refresh();
