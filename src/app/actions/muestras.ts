@@ -152,7 +152,8 @@ export async function listSheetFiles(
 
         // Busca archivos Sheets que contengan el semestre en el nombre, ordenados de más reciente a más antiguo
         const response = await drive.files.list({
-            q: `mimeType='application/vnd.google-apps.spreadsheet' and name contains '${semester}' and trashed=false`,
+            // Buscamos el semestre pero excluimos archivos de consolidación de pagos
+            q: `mimeType='application/vnd.google-apps.spreadsheet' and name contains '${semester}' and not name contains 'pago' and trashed=false`,
             spaces: 'drive',
             fields: 'files(id, name, createdTime)',
             orderBy: 'createdTime desc',
@@ -223,7 +224,12 @@ export async function importFilesToPool(
 
                 const col = (keyword: string): number => rawHeaders.findIndex((h) => h.includes(keyword.toLowerCase()));
 
-                const iStudentName = col('fullname') !== -1 ? col('fullname') : col('cupo');
+                // ESTRUCTURA DEL SHEET:
+                //   'fullname' → Identificador del BLOQUE horario (ej: "PIANO - 3:00pm - CASTELLANA") — NO es el nombre del alumno
+                //   'cupo 1'   → Nombre REAL del estudiante (ej: "MARÍA PAZ RIVEROS LEÓN")
+                // Por eso se prioriza 'cupo' (nombre real) y 'fullname' solo se guarda como referencia de bloque.
+                const iBlockName = col('fullname');                          // Bloque horario (referencia)
+                const iStudentName = col('cupo');                            // Nombre real del estudiante
                 const iTeacher = col('profesor');
                 const iInstrument = col('materia');
 
