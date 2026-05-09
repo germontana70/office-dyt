@@ -472,8 +472,8 @@ const resolvePhotoUrl = (url: string | null | undefined, semester?: string): str
         }
     }
 
-    // Asegurar que el semestre esté en la ruta
-    if (semester && !finalPath.includes(`${semester}/`)) {
+    // Asegurar que el semestre esté en la ruta, a menos que sea una foto legacy en la raíz
+    if (semester && !finalPath.includes(`${semester}/`) && !finalPath.startsWith('profile_')) {
         finalPath = `${semester}/${finalPath}`;
     }
 
