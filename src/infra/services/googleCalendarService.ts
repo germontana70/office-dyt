@@ -1,10 +1,9 @@
 import { google, calendar_v3 } from 'googleapis';
-import fs from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 
-// ─── OAuth2 Authentication (Bypass Service Account Restrictions) ──────────────
-const CREDENTIALS_PATH = path.join(process.cwd(), 'google-credentials', 'credentials.json');
-const TOKEN_PATH = path.join(process.cwd(), 'google-credentials', 'token.json');
+// ─── Service Account Robot (Patrón unificado con Drive/Sheets/Muestras) ──────
+const CREDENTIALS_PATH = path.join(process.cwd(), 'credenciales', 'credenciales_robot.json');
 
 const CALENDAR_SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly',
@@ -27,47 +26,41 @@ export class GoogleCalendarService {
     private static authClient: any = null;
 
     /**
-     * ─── User-Delegated OAuth2 Auth (Admin Bypass) ──────────────────────────
-     * Lee credenciales y token delegados para bypass del bloqueo de Workspace.
+     * ─── Service Account Auth (Robot DYT) ───────────────────────────────────
+     * Usa credenciales_robot.json — mismo patrón de drive.ts y muestras.ts.
+     * Los calendarios deben estar compartidos con dyt-drive-robot@office-dyt.iam.gserviceaccount.com
      */
     public static async getAuthClient() {
         if (this.authClient) return this.authClient;
 
         try {
-            console.log('[GOOGLE CALENDAR] Inicializando OAuth2 Delegado...');
-            
-            const credentialsRaw = await fs.readFile(CREDENTIALS_PATH, 'utf-8');
-            const credentials = JSON.parse(credentialsRaw);
-            const keys = credentials.installed || credentials.web;
-            
-            const oAuth2Client = new google.auth.OAuth2(
-                keys.client_id,
-                keys.client_secret,
-                keys.redirect_uris[0]
-            );
+            console.log('[GOOGLE CALENDAR] Inicializando Service Account Robot...');
 
-            // Carga del token generado manualmente
-            const tokenRaw = await fs.readFile(TOKEN_PATH, 'utf-8');
-            const token = JSON.parse(tokenRaw);
-            oAuth2Client.setCredentials(token);
+            if (!fs.existsSync(CREDENTIALS_PATH)) {
+                throw new Error(`Credenciales no encontradas en: ${CREDENTIALS_PATH}`);
+            }
 
-            // Refresco automático de token está soportado si contiene refresh_token
-            oAuth2Client.on('tokens', (tokens) => {
-                if (tokens.refresh_token) {
-                    console.log('[GOOGLE CALENDAR] Refrescando OAuth2 Token...');
-                    // In a production app, we would write these back to token.json
-                    token.access_token = tokens.access_token;
-                    token.refresh_token = tokens.refresh_token;
-                    token.expiry_date = tokens.expiry_date;
-                    fs.writeFile(TOKEN_PATH, JSON.stringify(token)).catch(console.error);
-                }
+            const credentialsData = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
+            const credentials = JSON.parse(credentialsData);
+
+            if (!credentials.private_key || !credentials.client_email) {
+                throw new Error(`El archivo credenciales_robot.json está vacío o mal configurado.`);
+            }
+
+            const auth = new google.auth.GoogleAuth({
+                credentials: {
+                    client_email: credentials.client_email,
+                    private_key: credentials.private_key.replace(/\\n/g, '\n'),
+                },
+                scopes: CALENDAR_SCOPES,
             });
 
-            this.authClient = oAuth2Client;
+            this.authClient = await auth.getClient();
+            console.log(`[GOOGLE CALENDAR] ✅ Robot autenticado como: ${credentials.client_email}`);
             return this.authClient;
         } catch (error: any) {
             console.error('[GOOGLE CALENDAR AUTH ERROR]:', error.message || error);
-            throw new Error(`Google Auth Failed: ${error.message || 'Error cargando credenciales OAuth2. Verifica google-credentials/token.json.'}`);
+            throw new Error(`Google Auth Failed: ${error.message || 'Error cargando credenciales del Robot. Verifica credenciales/credenciales_robot.json.'}`);
         }
     }
 
