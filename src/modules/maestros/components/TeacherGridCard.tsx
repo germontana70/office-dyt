@@ -36,7 +36,7 @@ export function TeacherGridCard({ teacher }: { teacher: Teacher }) {
                     <div className="relative z-10 flex items-center gap-2 sm:min-w-[140px] sm:justify-center">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Tarifa/hr</span>
                         <span className="text-lg font-black text-accent drop-shadow-[0_0_8px_hsl(var(--accent)/0.3)]">
-                            {teacher.hourly_rate ? `$${teacher.hourly_rate.toLocaleString()}` : 'Variable'}
+                            {teacher.hourly_rate ? `$${teacher.hourly_rate.toLocaleString('es-CO')}` : 'Variable'}
                         </span>
                     </div>
 
