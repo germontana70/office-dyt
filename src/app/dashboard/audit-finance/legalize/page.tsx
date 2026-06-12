@@ -3,7 +3,7 @@ import { LegalizeClientView, type LegalizeRow } from '@/modules/audit-finance/co
 
 export const dynamic = 'force-dynamic';
 
-const SEMESTER = '2026-1';
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
 
 type EnrollmentRow = {
     id: string;
@@ -61,6 +61,7 @@ const calculateAge = (student: StudentRow): number | null => {
 };
 
 export default async function LegalizeAuditPage() {
+    const SEMESTER = (await getActiveSemesterName()) ?? '2026-1';
     const supabase = await createClient();
 
     const { data: enrollments, error: enrollmentsError } = await supabase

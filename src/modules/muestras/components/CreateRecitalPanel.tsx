@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function CreateRecitalPanel({ semester, onCreated }: Props) {
-    const [name, setName] = useState('Muestra Artística 2026-1');
+    const [name, setName] = useState(`Muestra Artística ${semester}`);
     const [date, setDate] = useState('');
     const [time, setTime] = useState('18:00');
     const [location, setLocation] = useState('');
@@ -49,7 +49,7 @@ export function CreateRecitalPanel({ semester, onCreated }: Props) {
                     <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Ej: Muestra Artística 2026-1"
+                        placeholder={`Ej: Muestra Artística ${semester}`}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all"
                     />
                 </div>

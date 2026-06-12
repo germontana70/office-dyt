@@ -67,7 +67,7 @@ export function EnrollmentForm({ globalSettings, currentSemester, students, inst
 
         const payload = {
             student_id: selectedStudent.id,
-            semester: currentSemester as "2026-1",
+            semester: currentSemester,
             enrollment_fee_enabled: formValues.enrollment_fee_enabled,
             tshirt_quantity: formValues.tshirt_quantity,
             tshirt_size: formValues.tshirt_size,

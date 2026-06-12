@@ -10,9 +10,10 @@ import { Teacher } from '../repository/teacher-repo';
 interface Props {
     teacher?: Teacher;
     trigger?: React.ReactNode;
+    semester?: string;
 }
 
-export function TeacherFormModal({ teacher, trigger }: Props) {
+export function TeacherFormModal({ teacher, trigger, semester }: Props) {
     const [isOpen, setIsOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
@@ -80,6 +81,8 @@ export function TeacherFormModal({ teacher, trigger }: Props) {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Campo oculto para vincular el maestro al semestre activo */}
+                            <input type="hidden" name="semester" value={semester || teacher?.semester || ''} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">

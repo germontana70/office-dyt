@@ -196,6 +196,8 @@ export async function syncSelectedPayments(records: AuditRecord[]): Promise<Sync
 
     try {
         const supabase = await createClient();
+        const { getActiveSemesterName } = await import('@/infra/services/semester-helper');
+        const activeSemester = await getActiveSemesterName();
 
         for (const record of records) {
             // Saltamos registros que no hicieron match con DB
@@ -219,16 +221,16 @@ export async function syncSelectedPayments(records: AuditRecord[]): Promise<Sync
             }
             const studentId = students[0].id;
 
-            // 2. Obtener el enrollment_id del semestre 2026-1
+            // 2. Obtener el enrollment_id del semestre activo
             const { data: enrollments, error: enrollError } = await supabase
                 .from('dyt_enrollments')
                 .select('id')
                 .eq('student_id', studentId)
-                .eq('semester', '2026-1')
+                .eq('semester', activeSemester)
                 .limit(1);
 
             if (enrollError || !enrollments || enrollments.length === 0) {
-                result.errors.push(`Matrícula no encontrada para documento: ${record.document} en 2026-1`);
+                result.errors.push(`Matrícula no encontrada para documento: ${record.document} en ${activeSemester}`);
                 result.skipped++;
                 continue;
             }
@@ -248,7 +250,7 @@ export async function syncSelectedPayments(records: AuditRecord[]): Promise<Sync
             }
             const paymentPlanId = plans[0].id;
 
-            // 3. Obtener el enrollment_id del semestre 2026-1 (Ya lo tenemos en enrollmentId)
+            // 3. Obtener el enrollment_id (Ya lo tenemos en enrollmentId)
 
             // 4. Iterar sobre las cuotas y sincronizar
             for (const inst of record.installments) {

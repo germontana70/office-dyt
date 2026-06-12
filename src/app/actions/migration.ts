@@ -10,8 +10,10 @@ type LegacyProgram = {
     schedules?: Array<{ day?: string; time?: string }>;
 };
 
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
+
 export async function migrateSiaToDyt() {
-    const semester = '2026-1';
+    const semester = await getActiveSemesterName();
 
     try {
         const supabase = await createClient();
@@ -172,8 +174,9 @@ export async function migrateSiaToDyt() {
     }
 }
 
-export async function getEnrollmentAudit(studentId: string, semester: string = '2026-1') {
+export async function getEnrollmentAudit(studentId: string, customSemester?: string) {
     const supabase = await createClient();
+    const semester = customSemester || await getActiveSemesterName();
 
     try {
         const { data: enrollment, error: enrollmentError } = await supabase

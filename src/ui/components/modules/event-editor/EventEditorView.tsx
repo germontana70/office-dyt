@@ -6,7 +6,8 @@ import { searchCalendarEvents, batchUpdateEventDescriptions, batchUpdateEventTit
 import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { PremiumButton } from '@/ui/components/modules/buttons/PremiumButton';
 import { toast } from 'sonner';
-import { Calendar, Search, AlignLeft, Edit3, CheckSquare, Square, RefreshCw, Type, Save, XCircle, CalendarPlus, Clock } from 'lucide-react';
+import { Calendar, Search, AlignLeft, Edit3, CheckSquare, Square, RefreshCw, Type, Save, XCircle, CalendarPlus, Clock, Sparkles } from 'lucide-react';
+import { EventCreatorPanel } from './EventCreatorPanel';
 
 const cleanHTML = (html: string) => {
     if (!html) return "";
@@ -38,7 +39,7 @@ export function EventEditorView() {
     const [matchString, setMatchString] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
 
-    const [editorMode, setEditorMode] = useState<'INJECT' | 'RENAME' | 'CANCEL' | 'REPOSICION'>('INJECT');
+    const [editorMode, setEditorMode] = useState<'CREATE' | 'INJECT' | 'RENAME' | 'CANCEL' | 'REPOSICION'>('CREATE');
     const [newTitles, setNewTitles] = useState<Record<string, string>>({});
     const [isRenaming, setIsRenaming] = useState(false);
     const [prependText, setPrependText] = useState('');
@@ -266,8 +267,73 @@ export function EventEditorView() {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* SEARCH PANEL */}
-            <GlassCard className="p-6 border-white/10 bg-black/40 backdrop-blur-xl relative overflow-hidden">
+            {/* MODE TABS - ALWAYS VISIBLE */}
+            <div className="flex justify-center">
+                <div className="inline-flex bg-white/5 border border-white/10 p-1 rounded-2xl">
+                    <button
+                        onClick={() => setEditorMode('CREATE')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                            editorMode === 'CREATE'
+                                ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        Creación Mágica
+                    </button>
+                    <button
+                        onClick={() => setEditorMode('INJECT')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                            editorMode === 'INJECT'
+                                ? 'bg-accent/20 text-accent shadow-[0_0_15px_hsl(var(--accent)/0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <Edit3 className="w-4 h-4" />
+                        Inyección de Notas
+                    </button>
+                    <button
+                        onClick={() => setEditorMode('RENAME')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                            editorMode === 'RENAME'
+                                ? 'bg-primary/20 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <Type className="w-4 h-4" />
+                        Renombrado Masivo
+                    </button>
+                    <button
+                        onClick={() => setEditorMode('CANCEL')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                            editorMode === 'CANCEL'
+                                ? 'bg-red-500/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <XCircle className="w-4 h-4" />
+                        Cancelar Clase
+                    </button>
+                    <button
+                        onClick={() => setEditorMode('REPOSICION')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                            editorMode === 'REPOSICION'
+                                ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <CalendarPlus className="w-4 h-4" />
+                        Reprogramar
+                    </button>
+                </div>
+            </div>
+
+            {editorMode === 'CREATE' ? (
+                <EventCreatorPanel />
+            ) : (
+                <>
+                    {/* SEARCH PANEL */}
+                    <GlassCard className="p-6 border-white/10 bg-black/40 backdrop-blur-xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-primary/80" />
                 <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <Search className="w-5 h-5 text-primary" />
@@ -348,56 +414,6 @@ export function EventEditorView() {
             {events.length > 0 && (
                 <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700">
                     
-                    {/* MODE TABS */}
-                    <div className="flex justify-center">
-                        <div className="inline-flex bg-white/5 border border-white/10 p-1 rounded-2xl">
-                            <button
-                                onClick={() => setEditorMode('INJECT')}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                                    editorMode === 'INJECT'
-                                        ? 'bg-accent/20 text-accent shadow-[0_0_15px_hsl(var(--accent)/0.2)]'
-                                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                <Edit3 className="w-4 h-4" />
-                                Inyección de Notas
-                            </button>
-                            <button
-                                onClick={() => setEditorMode('RENAME')}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                                    editorMode === 'RENAME'
-                                        ? 'bg-primary/20 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.2)]'
-                                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                <Type className="w-4 h-4" />
-                                Renombrado Masivo
-                            </button>
-                            <button
-                                onClick={() => setEditorMode('CANCEL')}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                                    editorMode === 'CANCEL'
-                                        ? 'bg-red-500/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                <XCircle className="w-4 h-4" />
-                                Cancelar Clase
-                            </button>
-                            <button
-                                onClick={() => setEditorMode('REPOSICION')}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                                    editorMode === 'REPOSICION'
-                                        ? 'bg-orange-500/20 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)]'
-                                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                <CalendarPlus className="w-4 h-4" />
-                                Reposición
-                            </button>
-                        </div>
-                    </div>
-
                     {editorMode === 'INJECT' ? (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Event List (2/3 width) */}
@@ -926,6 +942,8 @@ export function EventEditorView() {
                         </div>
                     ) : null}
                 </div>
+            )}
+                </>
             )}
         </div>
     );

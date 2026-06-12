@@ -6,8 +6,10 @@ import { GlassCard } from '@/ui/components/modules/layout/GlassCard';
 import { GradientText } from "@/ui/components/modules/typography/GradientText";
 export const dynamic = 'force-dynamic';
 
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
+
 export default async function MatriculasPage() {
-    const SEMESTER = '2026-1'; 
+    const SEMESTER = (await getActiveSemesterName()) ?? '2026-1'; 
 
     // Consumo estricto de repositorios Zod-hybrated
     const students = await CurrentStudentRepository.getAllBySemester(SEMESTER);

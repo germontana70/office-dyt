@@ -96,6 +96,8 @@ function normalizeName(s: string): string {
 
 export async function fetchLegacyPaymentsAudit(): Promise<AuditRecord[]> {
     try {
+        const { getActiveSemesterName } = await import('@/infra/services/semester-helper');
+        const activeSemester = await getActiveSemesterName();
         const sheets = getSheetsClient();
         const spreadsheetId = '1T-JvH9bCj6v1rUcyxZw8uxjLkziZxw6YedwqlIHuEcI';
         
@@ -173,7 +175,7 @@ export async function fetchLegacyPaymentsAudit(): Promise<AuditRecord[]> {
                     installments_details
                 )
             `)
-            .eq('semester', '2026-1');
+            .eq('semester', activeSemester);
 
         if (enrollError) {
             console.error('[AUDIT] Supabase Enrollments Error:', enrollError?.message || JSON.stringify(enrollError));

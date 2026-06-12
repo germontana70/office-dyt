@@ -43,6 +43,34 @@ export class SemesterRepository {
 
     static async create(semester: Omit<Semester, 'id' | 'is_active' | 'created_at'>): Promise<Semester | null> {
         const supabase = await createClient();
+        
+        // Check if it already exists to avoid unique constraint violation
+        const { data: existing } = await supabase
+            .from('semesters')
+            .select('*')
+            .eq('name', semester.name)
+            .single();
+
+        if (existing) {
+            // Update existing record
+            const { data, error } = await supabase
+                .from('semesters')
+                .update({
+                    start_date: semester.start_date,
+                    sheet_url: semester.sheet_url
+                })
+                .eq('name', semester.name)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('[Supabase Error] Fallo al actualizar semestre:', error);
+                throw error;
+            }
+            return data;
+        }
+
+        // Insert new record
         const { data, error } = await supabase
             .from('semesters')
             .insert({ ...semester, is_active: false })

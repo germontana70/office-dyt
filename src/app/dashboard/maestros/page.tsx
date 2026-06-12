@@ -2,10 +2,15 @@ import { TeacherRepository } from '@/modules/maestros/repository/teacher-repo';
 import { TeacherGrid } from '@/modules/maestros/components/TeacherGrid';
 import { TeacherFormModal } from '@/modules/maestros/components/TeacherFormModal';
 
+import { SemesterRepository } from '@/modules/configuracion/repository/semester-repo';
+
 export const dynamic = 'force-dynamic';
 
 export default async function MaestrosPage() {
-    const teachers = await TeacherRepository.getAll();
+    const activeSemester = await SemesterRepository.getActive();
+    const currentSemesterName = activeSemester?.name || '2026-1';
+
+    const teachers = await TeacherRepository.getAll(currentSemesterName);
 
     return (
         <div className="relative min-h-screen w-full overflow-hidden p-6 md:p-10">
@@ -33,7 +38,7 @@ export default async function MaestrosPage() {
                             <span className="text-xl font-black italic tracking-tighter text-accent">{teachers.length}</span>
                             <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Totales</span>
                         </div>
-                        <TeacherFormModal />
+                        <TeacherFormModal semester={currentSemesterName} />
                     </div>
                 </header>
 

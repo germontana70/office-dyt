@@ -1447,6 +1447,7 @@ export function EnrollmentAuditCard({ enrollment }: EnrollmentAuditCardProps) {
                                             width={128}
                                             height={128}
                                             unoptimized={true}
+                                            onError={() => setCurrentPhotoUrl(undefined)}
                                             className={`w-full h-full object-cover transition-transform duration-700 ${isUploading ? 'scale-110 blur-sm' : 'group-hover/photo:scale-110'}`}
                                         />
                                     ) : (

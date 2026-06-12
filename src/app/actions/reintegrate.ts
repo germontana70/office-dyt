@@ -12,6 +12,7 @@ import {
   cleanPhone, 
   emptyToNull 
 } from '@/core/utils/studentMapper';
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
 
 /**
  * formatToPostgresDate
@@ -41,9 +42,10 @@ export interface HybridSearchResult {
  */
 export async function searchStudentsHybrid(
   query: string, 
-  semester: string = '2026-1'
+  customSemester?: string
 ): Promise<HybridSearchResult[]> {
   const supabase = await createClient();
+  const semester = customSemester || await getActiveSemesterName();
   const searchStr = `%${query}%`;
 
   // 1. Search in current 'students' table
@@ -107,10 +109,11 @@ export async function searchStudentsHybrid(
  */
 export async function reintegrateStudentFromHistory(
   truthTableId: string, 
-  targetSemester: string = '2026-1'
+  customSemester?: string
 ): Promise<{ success: boolean; studentId?: string; error?: string }> {
   try {
     const supabase = await createClient();
+    const targetSemester = customSemester || await getActiveSemesterName();
 
     // 1. Fetch historical record
     const { data: history, error: fetchError } = await supabase

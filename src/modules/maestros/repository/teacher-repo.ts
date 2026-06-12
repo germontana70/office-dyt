@@ -13,15 +13,17 @@ export interface Teacher {
     nickname_1: string | null;
     nickname_2: string | null;
     is_active: boolean;
+    semester: string;
     created_at?: string;
 }
 
 export class TeacherRepository {
-    static async getAll(): Promise<Teacher[]> {
+    static async getAll(semester: string): Promise<Teacher[]> {
         const supabase = await createClient();
         const { data, error } = await supabase
             .from('teachers')
             .select('*')
+            .eq('semester', semester)
             .order('name', { ascending: true });
 
         if (error) {
@@ -66,5 +68,40 @@ export class TeacherRepository {
         }
 
         return data;
+    }
+
+    /**
+     * Clona todos los maestros de un semestre a otro.
+     */
+    static async cloneTeachersToSemester(sourceSemester: string, targetSemester: string): Promise<boolean> {
+        const supabase = await createClient();
+
+        // 1. Check if target already has teachers
+        const { data: existingTarget } = await supabase
+            .from('teachers')
+            .select('id')
+            .eq('semester', targetSemester)
+            .limit(1);
+
+        if (existingTarget && existingTarget.length > 0) {
+            return true; // Ya hay maestros, no clonamos para evitar duplicados
+        }
+
+        // 2. Traer maestros del sourceSemester
+        const { data: sourceTeachers, error: sourceError } = await supabase
+            .from('teachers')
+            .select('*')
+            .eq('semester', sourceSemester);
+
+        if (!sourceError && sourceTeachers && sourceTeachers.length > 0) {
+            const newTeachers = sourceTeachers.map(t => {
+                const { id, created_at, ...rest } = t;
+                return { ...rest, semester: targetSemester };
+            });
+
+            await supabase.from('teachers').insert(newTeachers);
+        }
+
+        return true;
     }
 }

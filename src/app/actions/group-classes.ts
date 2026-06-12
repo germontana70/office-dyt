@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
 
 export async function createGroupClass(data: {
   semester: string;
@@ -146,12 +147,14 @@ export async function enrollStudentInGroup(
     return { error: 'Datos incompletos para la inscripción.' };
   }
 
+  const semesterName = await getActiveSemesterName();
+
   // PASO 1: SELECT estricto — El alumno ya está matriculado, solo extraemos su enrollment_id
   const { data: enrollment, error: fetchErr } = await supabase
     .from('dyt_enrollments')
     .select('id')
     .eq('student_id', studentId)
-    .eq('semester', '2026-1')
+    .eq('semester', semesterName)
     .limit(1)
     .maybeSingle();
 

@@ -15,9 +15,10 @@ interface Props {
     initialPayments: TeacherPaymentInfo[];
     startDate: string;
     endDate: string;
+    semester: string;
 }
 
-export default function PaymentClientWrapper({ initialPayments, startDate, endDate }: Props) {
+export default function PaymentClientWrapper({ initialPayments, startDate, endDate, semester }: Props) {
     const router = useRouter();
     const [payments, setPayments] = useState(initialPayments);
     const [selectedTeacher, setSelectedTeacher] = useState<TeacherPaymentInfo | null>(null);
@@ -37,7 +38,7 @@ export default function PaymentClientWrapper({ initialPayments, startDate, endDa
         setIsSyncing(true);
         setSyncMessage(null);
         try {
-            const res = await syncCalendarEventsAction(localStart, localEnd, "2026-1");
+            const res = await syncCalendarEventsAction(localStart, localEnd, semester);
             if (res.success) {
                 const warnList = (res as any).warningsList as SyncWarning[] || [];
                 setSyncWarnings(warnList);

@@ -8,8 +8,7 @@ import { normalizeNFD, getNameSearchTokens } from '@/infra/utils/normalize';
 import { hhmmssToSeconds, secondsToHHMMSS } from '@/infra/utils/timeline';
 import type { MuestraPresentacion, ProgramDetail, Recital, PresentacionPool } from '@/infra/types/muestras';
 
-const ACTIVE_SEMESTER = '2026-1';
-
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
 // ─────────────────────────────────────────────────────────────
 //  ROBOT: Google Auth
 // ─────────────────────────────────────────────────────────────
@@ -144,16 +143,17 @@ export async function correlateStudentIdentity(rawName: string): Promise<Correla
 // ─────────────────────────────────────────────────────────────
 
 export async function listSheetFiles(
-    semester: string = ACTIVE_SEMESTER
+    semester?: string
 ): Promise<{ success: boolean; files?: DriveFile[]; error?: string }> {
     try {
+        const activeSemester = semester || await getActiveSemesterName();
         const auth = getGoogleAuth();
         const drive = google.drive({ version: 'v3', auth });
 
         // Busca archivos Sheets que contengan el semestre en el nombre, ordenados de más reciente a más antiguo
         const response = await drive.files.list({
             // Buscamos el semestre pero excluimos archivos de consolidación de pagos
-            q: `mimeType='application/vnd.google-apps.spreadsheet' and name contains '${semester}' and not name contains 'pago' and trashed=false`,
+            q: `mimeType='application/vnd.google-apps.spreadsheet' and name contains '${activeSemester}' and not name contains 'pago' and trashed=false`,
             spaces: 'drive',
             fields: 'files(id, name, createdTime)',
             orderBy: 'createdTime desc',
@@ -183,9 +183,10 @@ export async function listSheetFiles(
 
 export async function importFilesToPool(
     files: { id: string; name: string }[],
-    semester: string = ACTIVE_SEMESTER
+    semester?: string
 ): Promise<{ success: boolean; results?: ImportTabResult[]; error?: string }> {
     try {
+        const activeSemester = semester || await getActiveSemesterName();
         const auth = getGoogleAuth();
         const sheets = google.sheets({ version: 'v4', auth });
         const supabase = await createClient();
@@ -277,7 +278,7 @@ export async function importFilesToPool(
                         program_details: programDetails,
                         total_duration_seconds: totalDurationSecs,
                         duration_text: secondsToHHMMSS(totalDurationSecs),
-                        semester,
+                        semester: activeSemester,
                         imported_from_file_id: file.id,
                         imported_from_file_name: file.name,
                     };
@@ -311,14 +312,15 @@ export async function importFilesToPool(
 // ─────────────────────────────────────────────────────────────
 
 export async function getPoolItems(
-    semester: string = ACTIVE_SEMESTER
+    semester?: string
 ): Promise<{ success: boolean; items?: PresentacionPool[]; error?: string }> {
     try {
+        const activeSemester = semester || await getActiveSemesterName();
         const supabase = await createClient();
         const { data, error } = await supabase
             .from('dyt_presentaciones_pool')
             .select('*')
-            .eq('semester', semester)
+            .eq('semester', activeSemester)
             .order('imported_at', { ascending: false });
             
         if (error) throw new Error(error.message);
@@ -369,14 +371,15 @@ export async function assignToRecital(
 // ─────────────────────────────────────────────────────────────
 
 export async function getRecitalesBySemester(
-    semester: string = ACTIVE_SEMESTER
+    semester?: string
 ): Promise<{ success: boolean; recitales?: Recital[]; error?: string }> {
     try {
+        const activeSemester = semester || await getActiveSemesterName();
         const supabase = await createClient();
         const { data, error } = await supabase
             .from('dyt_recitales')
             .select('*')
-            .eq('semester', semester)
+            .eq('semester', activeSemester)
             .order('start_time', { ascending: true });
         if (error) throw new Error(error.message);
         return { success: true, recitales: data ?? [] };
@@ -388,14 +391,15 @@ export async function getRecitalesBySemester(
 export async function createRecital(
     name: string,
     startTime: string,
-    semester: string = ACTIVE_SEMESTER,
+    semester?: string,
     location?: string
 ): Promise<{ success: boolean; recital?: Recital; error?: string }> {
     try {
+        const activeSemester = semester || await getActiveSemesterName();
         const supabase = await createClient();
         const { data, error } = await supabase
             .from('dyt_recitales')
-            .insert({ name, start_time: startTime, semester, location: location ?? null })
+            .insert({ name, start_time: startTime, semester: activeSemester, location: location ?? null })
             .select()
             .single();
         if (error) throw new Error(error.message);

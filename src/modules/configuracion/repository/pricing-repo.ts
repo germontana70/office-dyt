@@ -35,4 +35,64 @@ export class PricingRepository {
 
         return validPrices;
     }
+
+    /**
+     * Clona los precios de programas de un semestre origen a uno destino,
+     * útil cuando se crea un semestre nuevo para no tener que registrar todo desde cero.
+     */
+    static async cloneConfigToSemester(sourceSemester: string, targetSemester: string): Promise<boolean> {
+        const supabase = await createClient();
+
+        // 1. Check if target already has prices
+        const { data: existingTarget } = await supabase
+            .from('dyt_program_prices')
+            .select('id')
+            .eq('semester', targetSemester)
+            .limit(1);
+
+        if (existingTarget && existingTarget.length > 0) {
+            return true; // Ya hay precios, no clonamos para no duplicar
+        }
+
+        // 2. Traer precios del sourceSemester
+        const { data: sourcePrices, error: sourcePricesError } = await supabase
+            .from('dyt_program_prices')
+            .select('*')
+            .eq('semester', sourceSemester);
+
+        if (!sourcePricesError && sourcePrices && sourcePrices.length > 0) {
+            const newPrices = sourcePrices.map(p => {
+                const { id, created_at, ...rest } = p;
+                return { ...rest, semester: targetSemester };
+            });
+
+            await supabase.from('dyt_program_prices').insert(newPrices);
+        }
+
+        // 3. Clonar global settings (Matrícula y Camiseta)
+        const { data: existingSettings } = await supabase
+            .from('dyt_global_settings')
+            .select('id')
+            .eq('semester', targetSemester)
+            .limit(1);
+
+        if (!existingSettings || existingSettings.length === 0) {
+            const { data: sourceSettings, error: sourceSettingsError } = await supabase
+                .from('dyt_global_settings')
+                .select('*')
+                .eq('semester', sourceSemester)
+                .single();
+
+            if (!sourceSettingsError && sourceSettings) {
+                const { id, updated_at, ...rest } = sourceSettings;
+                await supabase.from('dyt_global_settings').insert({
+                    ...rest,
+                    semester: targetSemester,
+                    updated_at: new Date().toISOString()
+                });
+            }
+        }
+
+        return true;
+    }
 }

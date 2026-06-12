@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { dataService } from '@/infra/services/data';
 import { paymentService, TeacherPaymentInfo, ClassSession } from '@/infra/services/payments';
 import PaymentClientWrapper from '@/ui/components/modules/payments/PaymentClientWrapper';
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
 
 // Helper de fechas: Rango de pago (26 del mes anterior al 25 del actual)
 const getDefaultDateRange = () => {
@@ -56,6 +57,8 @@ export default async function PaymentsDashboardPage({
         console.error('Error al cargar pagos en servidor:', err);
     }
 
+            const semester = await getActiveSemesterName();
+
     return (
         <div style={{ padding: '2rem', maxWidth: '1400px', marginInline: 'auto' }}>
             <PaymentClientWrapper
@@ -63,6 +66,7 @@ export default async function PaymentsDashboardPage({
                 initialPayments={teacherPayments}
                 startDate={start}
                 endDate={end}
+                semester={semester}
             />
         </div>
     );

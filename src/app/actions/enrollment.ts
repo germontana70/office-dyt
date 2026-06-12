@@ -13,7 +13,7 @@ const ProgramSelectionSchema = z.object({
 
 const NewEnrollmentSchema = z.object({
     student_id: z.string().uuid(),
-    semester: z.literal('2026-1'),
+    semester: z.string(),
     enrollment_fee_enabled: z.boolean(),
     tshirt_quantity: z.number().min(0).max(5),
     tshirt_size: z.string().optional(),
@@ -104,8 +104,11 @@ export async function saveNewEnrollment(payload: z.infer<typeof NewEnrollmentSch
     }
 }
 
-export async function getActiveEnrollmentPrograms(studentId: string, semester: string = '2026-1') {
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
+
+export async function getActiveEnrollmentPrograms(studentId: string, customSemester?: string) {
     const supabase = await createClient();
+    const semester = customSemester || await getActiveSemesterName();
     
     const { data: enrollment, error: enrollmentError } = await supabase
         .from('dyt_enrollments')

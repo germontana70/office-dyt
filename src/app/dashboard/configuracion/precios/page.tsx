@@ -3,8 +3,10 @@ import { PricingTable } from '@/ui/components/modules/pricing/PricingTable';
 
 export const dynamic = 'force-dynamic';
 
+import { getActiveSemesterName } from '@/infra/services/semester-helper';
+
 export default async function PreciosPage() {
-    const SEMESTER = '2026-1'; // Semestre Activo de la institución
+    const SEMESTER = (await getActiveSemesterName()) ?? '2026-1'; // Semestre Activo de la institución
 
     // Consulta aislada por semestre
     const prices = await PricingRepository.getPricesBySemester(SEMESTER);
